@@ -57,35 +57,19 @@ def main(_):
     run_config.gpu_options.allow_growth=True
 
     with tf.Session(config=run_config) as sess:
-        if FLAGS.dataset == 'mnist':
-            dcgan = DCGAN(
-                sess,
-                input_width=FLAGS.input_width,
-                input_height=FLAGS.input_height,
-                output_width=FLAGS.output_width,
-                output_height=FLAGS.output_height,
-                batch_size=FLAGS.batch_size,
-                sample_num=FLAGS.batch_size,
-                y_dim=10,
-                dataset_name=FLAGS.data_dir,
-                input_fname_pattern=FLAGS.input_fname_pattern,
-                crop=FLAGS.crop,
-                checkpoint_dir=FLAGS.checkpoint_dir,
-                sample_dir=FLAGS.sample_dir)
-        else:
-            dcgan = DCGAN(
-                sess,
-                input_width=FLAGS.input_width,
-                input_height=FLAGS.input_height,
-                output_width=FLAGS.output_width,
-                output_height=FLAGS.output_height,
-                batch_size=FLAGS.batch_size,
-                sample_num=FLAGS.batch_size,
-                dataset_name=FLAGS.data_dir,
-                input_fname_pattern=FLAGS.input_fname_pattern,
-                crop=FLAGS.crop,
-                checkpoint_dir=FLAGS.checkpoint_dir,
-                sample_dir=FLAGS.sample_dir)
+        dcgan = DCGAN(
+            sess,
+            input_width=FLAGS.input_width,
+            input_height=FLAGS.input_height,
+            output_width=FLAGS.output_width,
+            output_height=FLAGS.output_height,
+            batch_size=FLAGS.batch_size,
+            sample_num=FLAGS.batch_size,
+            data_dir=FLAGS.data_dir,
+            input_fname_pattern=FLAGS.input_fname_pattern,
+            crop=FLAGS.crop,
+            checkpoint_dir=FLAGS.checkpoint_dir,
+            sample_dir=FLAGS.sample_dir)
 
         show_all_variables()
 
