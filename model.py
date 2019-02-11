@@ -73,11 +73,11 @@ class DCGAN(object):  #定义DCGAN类
     self.checkpoint_dir = checkpoint_dir
     self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
 
-      imreadImg = imread(self.data[0]);
-      if len(imreadImg.shape) >= 3: #check if image is a non-grayscale image by checking channel number
-        self.c_dim = imread(self.data[0]).shape[-1]
-      else:
-        self.c_dim = 1
+    imreadImg = imread(self.data[0]);
+    if len(imreadImg.shape) >= 3: #check if image is a non-grayscale image by checking channel number
+      self.c_dim = imread(self.data[0]).shape[-1]
+    else:
+      self.c_dim = 1
 
     self.grayscale = (self.c_dim == 1)
 
