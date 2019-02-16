@@ -1,37 +1,30 @@
 import os
-import scipy.misc
 import numpy as np
 
 from model import DCGAN
-from utils import pp, visualize, to_json, show_all_variables
+from utils import visualize, show_all_variables
 
 import tensorflow as tf
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 300, "Epoch to train [25]")
-# 迭代次数
-flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
-# 学习速率，默认是0.002
-flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
-flags.DEFINE_float("train_size", np.inf, "The size of train images [np.inf]")
-# 训练数据大小
+flags.DEFINE_integer("epoch", 10, "Epoch to train [25]")
 flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
-# 每次迭代的图像数量
+flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
+flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
+flags.DEFINE_float("train_size", np.inf, "The number of images to train, set [np.inf] to train all")
+
 flags.DEFINE_integer("input_height", 96, "The size of image to use (will be center cropped). [108]")
-# 需要指定输入图像的高
 flags.DEFINE_integer("input_width", None, "The size of image to use (will be center cropped). "
                                           "If None, same value as input_height [None]")
-# 需要指定输入图像的宽
 flags.DEFINE_integer("output_height", 48, "The size of the output images to produce [64]")
 flags.DEFINE_integer("output_width", None, "The size of the output images to produce. "
                                            "If None, same value as output_height [None]")
-flags.DEFINE_string("data_dir", "./dataset_faces", "The name of dataset [celebA, mnist, lsun]")
-# 需要指定处理哪个数据集
+flags.DEFINE_string("data_dir", "./dataset_faces", "The path of images")
 flags.DEFINE_string("input_fname_pattern", "*.jpg", "Glob pattern of filename of input images [*]")
-# 输入的文件格式
+
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "./samples", "Directory name to save the image samples [samples]")
-# 储存训练样例
+
 flags.DEFINE_boolean("train", True, "True for training, False for testing [False]")
 flags.DEFINE_boolean("crop", True, "True for training, False for testing [False]")
 flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
@@ -39,8 +32,6 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-    # pp.pprint(flags.FLAGS.__flags)
-
     if FLAGS.input_width is None:
         FLAGS.input_width = FLAGS.input_height
     if FLAGS.output_width is None:
@@ -51,8 +42,7 @@ def main(_):
     if not os.path.exists(FLAGS.sample_dir):
         os.makedirs(FLAGS.sample_dir)
 
-    # 控制GPU资源使用率
-    # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+    # Prevent tensorflow from allocating the totality of a GPU memory
     run_config = tf.ConfigProto()
     run_config.gpu_options.allow_growth=True
 
@@ -79,16 +69,9 @@ def main(_):
             if not dcgan.load(FLAGS.checkpoint_dir)[0]:
                 raise Exception("[!] Train a model first, then run test mode")
 
-
-    # to_json("./web/js/layers.js", [dcgan.h0_w, dcgan.h0_b, dcgan.g_bn0],
-    #                 [dcgan.h1_w, dcgan.h1_b, dcgan.g_bn1],
-    #                 [dcgan.h2_w, dcgan.h2_b, dcgan.g_bn2],
-    #                 [dcgan.h3_w, dcgan.h3_b, dcgan.g_bn3],
-    #                 [dcgan.h4_w, dcgan.h4_b, None])
-
         # Below is codes for visualization
-        OPTION = 1
-        visualize(sess, dcgan, FLAGS, OPTION)
+        option = 1
+        visualize(sess, dcgan, FLAGS, option)
 
 
 if __name__ == '__main__':
