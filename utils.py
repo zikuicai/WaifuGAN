@@ -31,8 +31,6 @@ def get_image(image_path, input_height, input_width,
 
 
 def save_images(images, size, image_path):
-"""储存转变后的图像
-"""
     return imsave(inverse_transform(images), size, image_path)
 
 
