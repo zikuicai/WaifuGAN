@@ -6,7 +6,7 @@ from tensorflow.python.framework import ops
 
 from utils import *
 
-# different API in different versions
+# for compatibility between different tf versions
 try:
     image_summary = tf.image_summary
     scalar_summary = tf.scalar_summary
@@ -19,13 +19,6 @@ except:
     histogram_summary = tf.summary.histogram
     merge_summary = tf.summary.merge
     SummaryWriter = tf.summary.FileWriter
-
-if "concat_v2" in dir(tf):
-    def concat(tensors, axis, *args, **kwargs):
-        return tf.concat_v2(tensors, axis, *args, **kwargs)
-else:
-    def concat(tensors, axis, *args, **kwargs):
-        return tf.concat(tensors, axis, *args, **kwargs)
 
 
 class batch_norm(object):
@@ -45,47 +38,32 @@ class batch_norm(object):
                                             scope=self.name)
 
 
-def conv2d(input_, output_dim,
-           k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.02,
-           name="conv2d"):
+def conv2d(x, output_dim, name="conv2d"):
+    # 5x5 filter size [filter_height, filter_width, in_channels, out_channels]
+    # 2x2 strides [batch, height, width, channels]
     with tf.variable_scope(name):
-        w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
-                            initializer=tf.truncated_normal_initializer(stddev=stddev))
-        conv = tf.nn.conv2d(input_, w, strides=[
-                            1, d_h, d_w, 1], padding='SAME')
-
-        biases = tf.get_variable(
-            'biases', [output_dim], initializer=tf.constant_initializer(0.0))
+        w = tf.get_variable('w', [5, 5, x.get_shape()[-1], output_dim],
+                            initializer=tf.truncated_normal_initializer(stddev=0.02))
+        conv = tf.nn.conv2d(x, w, strides=[1, 2, 2, 1], padding='SAME')
+        biases = tf.get_variable('b', [output_dim], 
+                                 initializer=tf.constant_initializer(0.0))
         conv = tf.reshape(tf.nn.bias_add(conv, biases), conv.get_shape())
 
         return conv
 
 
-def deconv2d(input_, output_shape,
-             k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.02,
-             name="deconv2d", with_w=False):
+def deconv2d(x, output_shape, name="deconv2d"):
     with tf.variable_scope(name):
         # filter : [height, width, output_channels, in_channels]
-        w = tf.get_variable('w', [k_h, k_w, output_shape[-1], input_.get_shape()[-1]],
-                            initializer=tf.random_normal_initializer(stddev=stddev))
-
-        try:
-            deconv = tf.nn.conv2d_transpose(input_, w, output_shape=output_shape,
-                                            strides=[1, d_h, d_w, 1])
-
-        # Support for verisons of TensorFlow before 0.7.0
-        except AttributeError:
-            deconv = tf.nn.deconv2d(input_, w, output_shape=output_shape,
-                                    strides=[1, d_h, d_w, 1])
-
-        biases = tf.get_variable(
-            'biases', [output_shape[-1]], initializer=tf.constant_initializer(0.0))
+        w = tf.get_variable('w', [5, 5, output_shape[-1], x.get_shape()[-1]],
+                            initializer=tf.random_normal_initializer(stddev=0.02))
+        deconv = tf.nn.conv2d_transpose(x, w, output_shape=output_shape,
+                                        strides=[1, 2, 2, 1])
+        biases = tf.get_variable('b', [output_shape[-1]], 
+                                 initializer=tf.constant_initializer(0.0))
         deconv = tf.reshape(tf.nn.bias_add(deconv, biases), deconv.get_shape())
 
-        if with_w:
-            return deconv, w, biases
-        else:
-            return deconv
+        return deconv
 
 
 def lrelu(x, leak=0.2, name="lrelu"):
@@ -94,15 +72,25 @@ def lrelu(x, leak=0.2, name="lrelu"):
     return tf.maximum(x, leak*x)
 
 
-def linear(input_, output_size, scope=None, stddev=0.02, bias_start=0.0, with_w=False):
+def dense(input_, output_size, scope=None, bias_start=0.0, with_w=False):
+    """Densely connected layer
+    """
     shape = input_.get_shape().as_list()
 
-    with tf.variable_scope(scope or "Linear"):
+    with tf.variable_scope(scope or "Dense"):
         matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
-                                 tf.random_normal_initializer(stddev=stddev))
+                                 tf.random_normal_initializer(stddev=0.02))
         bias = tf.get_variable("bias", [output_size],
                                initializer=tf.constant_initializer(bias_start))
-        if with_w:
-            return tf.matmul(input_, matrix) + bias, matrix, bias
-        else:
-            return tf.matmul(input_, matrix) + bias
+        return tf.matmul(input_, matrix) + bias
+
+def loss(x, y):
+    """Cost function
+    Define the loss function as sigmoid_cross_entropy_with_logits
+    http://neuralnetworksanddeeplearning.com/chap3.html#introducing_the_cross-entropy_cost_function
+
+    Returns:
+      y * -log(sigmoid(x)) + (1 - y) * -log(1 - sigmoid(x))
+      the loss is minimal when sigmoid(x) and y are both 0 or both 1
+    """
+    return tf.nn.sigmoid_cross_entropy_with_logits(logits=x, labels=y)

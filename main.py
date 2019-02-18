@@ -1,10 +1,9 @@
 import os
 import numpy as np
+import tensorflow as tf
 
 from model import DCGAN
 from utils import visualize, show_all_variables
-
-import tensorflow as tf
 
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 10, "Epoch to train [25]")

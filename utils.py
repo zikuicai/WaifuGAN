@@ -25,18 +25,26 @@ def imread(path, grayscale=False):
 def get_image(image_path, input_height, input_width,
               resize_height=64, resize_width=64,
               crop=True, grayscale=False):
-    image = imread(image_path, grayscale)  # 读取灰度图像
+    image = imread(image_path, grayscale)
     return transform(image, input_height, input_width,
                      resize_height, resize_width, crop)
+
+
+def imsave(images, size, path):
+    image = np.squeeze(merge(images, size))
+    return scipy.misc.imsave(path, image)
 
 
 def save_images(images, size, image_path):
     return imsave(inverse_transform(images), size, image_path)
 
 
-def merge(images, size):  # size定义8*8的格式
+def merge(images, size):  
+    """Merge size[0]*size[1] small pictures into a big one
+    :param size: an 1x2 array, like [8,8]
+    """
     h, w = images.shape[1], images.shape[2]
-    if (images.shape[3] in (3, 4)):  # 如果是RGB图像
+    if (images.shape[3] in (3, 4)):  # RGB
         c = images.shape[3]
         img = np.zeros((h * size[0], w * size[1], c))
         for idx, image in enumerate(images):
@@ -44,7 +52,7 @@ def merge(images, size):  # size定义8*8的格式
             j = idx // size[1]
             img[j * h:j * h + h, i * w:i * w + w, :] = image
         return img
-    elif images.shape[3] == 1:
+    elif images.shape[3] == 1:  # grayscale
         img = np.zeros((h * size[0], w * size[1]))
         for idx, image in enumerate(images):
             i = idx % size[1]
@@ -56,13 +64,12 @@ def merge(images, size):  # size定义8*8的格式
                          'must have dimensions: HxW or HxWx3 or HxWx4')
 
 
-def imsave(images, size, path):
-    image = np.squeeze(merge(images, size))  # 从数组的形状中删除单维条目，即把shape中为1的维度去掉
-    return scipy.misc.imsave(path, image)
-
-
-def center_crop(x, crop_h, crop_w,
-                resize_h=64, resize_w=64):  # 根据crop_h裁剪
+def center_crop(x, crop_h, crop_w, resize_h=64, resize_w=64):
+    """Crop an image around the center
+    :param x: input image
+    :param crop_h: the height of the crop
+    :return: an image of size 64x64
+    """
     if crop_w is None:
         crop_w = crop_h
     h, w = x.shape[:2]
@@ -89,8 +96,9 @@ def inverse_transform(images):
 
 
 def make_gif(images, fname, duration=2, true_image=False):
+    """make a gif of certain duartion from a bunch of images
+    """
     import moviepy.editor as mpy
-    # 利用moviepy.editor模块来制作动图，为了可视化用的
 
     def make_frame(t):
         try:
@@ -105,21 +113,25 @@ def make_gif(images, fname, duration=2, true_image=False):
 
     clip = mpy.VideoClip(make_frame, duration=duration)
     clip.write_gif(fname, fps=len(images) / duration)
-    # 然后返回每帧图像。最后视频修剪并制作成GIF动画
 
 
 def visualize(sess, dcgan, config, option):
-    # 分为0、1、2、3、4种option。
-    # 如果option=0，则显示生产的样本‘
-    # 如果option=1，根据不同数据集不一样的处理，并利用前面的save_images()函数将训练sample保存下来；
-    # 本次在main.py中选用option=1。
+    # 5 options from 0 - 4
+    # option=0, generate one batch of images and save
+    # option=1, 
+    # option=2
+    # option=3
+    # option=4
+
+
     image_frame_dim = int(math.ceil(config.batch_size**.5))
+    # set the checkerboard dimension to be the square root of batch size
     if option == 0:
         z_sample = np.random.uniform(-0.5, 0.5,
                                      size=(config.batch_size, dcgan.z_dim))
         samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
         save_images(samples, [image_frame_dim, image_frame_dim],
-                    './samples/test_%s.png' % strftime("%Y%m%d%H%M%S", gmtime()))
+                    './samples/opt0_test_%s.png' % strftime("%Y%m%d%H%M%S", gmtime()))
     elif option == 1:
         values = np.arange(0, 1, 1./config.batch_size)
         for idx in range(100):
@@ -131,7 +143,7 @@ def visualize(sess, dcgan, config, option):
             samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
 
             save_images(samples, [image_frame_dim, image_frame_dim],
-                        './samples/test_arange_%s.png' % (idx))
+                        './samples/opt1_test_arange_%s.png' % (idx))
     elif option == 2:
         values = np.arange(0, 1, 1./config.batch_size)
         for idx in [random.randint(0, 99) for _ in range(100)]:
@@ -145,10 +157,10 @@ def visualize(sess, dcgan, config, option):
             samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
 
             try:
-                make_gif(samples, './samples/test_gif_%s.gif' % (idx))
+                make_gif(samples, './samples/opt2_test_gif_%s.gif' % (idx))
             except:
                 save_images(samples, [image_frame_dim, image_frame_dim],
-                            './samples/test_%s.png' % strftime("%Y%m%d%H%M%S", gmtime()))
+                            './samples/opt2_test_%s.png' % strftime("%Y%m%d%H%M%S", gmtime()))
     elif option == 3:
         values = np.arange(0, 1, 1./config.batch_size)
         for idx in range(100):
@@ -158,7 +170,7 @@ def visualize(sess, dcgan, config, option):
                 z[idx] = values[kdx]
 
             samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-            make_gif(samples, './samples/test_gif_%s.gif' % (idx))
+            make_gif(samples, './samples/opt3_test_gif_%s.gif' % (idx))
     elif option == 4:
         image_set = []
         values = np.arange(0, 1, 1./config.batch_size)
@@ -171,11 +183,11 @@ def visualize(sess, dcgan, config, option):
 
             image_set.append(
                 sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
-            make_gif(image_set[-1], './samples/test_gif_%s.gif' % (idx))
+            make_gif(image_set[-1], './samples/opt4_test_gif_%s.gif' % (idx))
 
         new_image_set = [merge(np.array([images[idx] for images in image_set]), [10, 10])
                          for idx in range(64) + range(63, -1, -1)]
-        make_gif(new_image_set, './samples/test_gif_merged.gif', duration=8)
+        make_gif(new_image_set, './samples/opt4_test_gif_merged.gif', duration=8)
 
 
 def image_manifold_size(num_images):
