@@ -142,7 +142,7 @@ def visualize(sess, dcgan, config, option):
         # generate n x batch-size images and save them in the samples folder
         n = 10
         for idx in range(n):
-            print(" [*] generate pic %d" % idx)
+            print(" [*] generating pic %d" % idx)
             z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
             samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
             save_images(samples, [image_frame_dim, image_frame_dim],
@@ -152,7 +152,7 @@ def visualize(sess, dcgan, config, option):
         image_set = []
         n = 10
         for idx in range(n):
-            print(" [*] generate pic %d" % idx)
+            print(" [*] generating pic %d" % idx)
             z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
             image_set.append(sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
             make_gif(image_set[-1], './samples/opt4_test_gif_%s.gif' % (idx))

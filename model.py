@@ -169,7 +169,7 @@ class DCGAN(object):
 
             self.data = glob(os.path.join(config.data_dir, self.input_fname_pattern))
             # get all images in arbitrary order
-            batch_idxs = min(len(self.data), config.train_size) // config.batch_size
+            batch_idxs = len(self.data) // config.batch_size
             # how many batches the whole data set can be divided into
 
             for idx in range(0, batch_idxs):
@@ -205,28 +205,29 @@ class DCGAN(object):
                 errG = self.g_loss.eval({self.z: batch_z})
 
                 counter += 1
-                print("Epoch: [%4d] batches: [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f"
-                      % (epoch + 1, idx, batch_idxs,
+                print("Epoch: [%4d] batch: [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f"
+                      % (epoch + 1, idx + 1, batch_idxs,
                          time.time() - start_time, errD_fake+errD_real, errG))
 
-
-            # save generated sample images every epoch
-            try:
-                samples, d_loss, g_loss = self.sess.run(
-                    [self.sampler, self.d_loss, self.g_loss],
-                    feed_dict={
-                        self.z: sample_z,
-                        self.inputs: sample_inputs,
-                    },
-                )
-                save_images(samples, image_manifold_size(samples.shape[0]),
-                            './{}/train_{:04d}.png'.format(config.sample_dir, epoch))
-                print("[Sample] d_loss: %.8f, g_loss: %.8f" %(d_loss, g_loss))
-            except:
-                print("save pic error!...")
+            if epoch % 10 == 9:
+                # save generated sample images every 10 epoches
+                try:
+                    samples, d_loss, g_loss = self.sess.run(
+                        [self.sampler, self.d_loss, self.g_loss],
+                        feed_dict={
+                            self.z: sample_z,
+                            self.inputs: sample_inputs,
+                        },
+                    )
+                    save_images(samples, image_manifold_size(samples.shape[0]),
+                                './{}/train_{:04d}.png'.format(config.sample_dir, epoch))
+                    print("[Sample] d_loss: %.8f, g_loss: %.8f" %(d_loss, g_loss))
+                except:
+                    print("save pic error!...")
             
-            # save checkpoint every epoch
-            self.save(config.checkpoint_dir, counter)
+            if epoch % 20 == 9:
+                # save checkpoint every 20 epochs
+                self.save(config.checkpoint_dir, counter)
 
 
     def discriminator(self, image, reuse=False):
