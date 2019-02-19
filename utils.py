@@ -33,7 +33,9 @@ def get_image2(image_path, w, h):
     """
     image = imread(image_path)
     cropped_image = random_crop(image, w, h)
-    return cropped_image
+    # normalize every element in the image to be between -0.5 and 0.5
+    normalized_image = np.array(cropped_image)/127.5 - 1.
+    return normalized_image
 
 
 def imsave(images, size, path):
@@ -138,20 +140,20 @@ def visualize(sess, dcgan, config, option):
     
     if option == 0:
         # generate n x batch-size images and save them in the samples folder
-        n = 100
+        n = 10
         for idx in range(n):
             print(" [*] generate pic %d" % idx)
-            z_sample = np.random.uniform(-1, 1, size=(config.sample_num, dcgan.z_dim))
+            z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
             samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
             save_images(samples, [image_frame_dim, image_frame_dim],
                         './samples/opt0_test_arange_%s.png' % (idx))
     elif option == 1:
         # generate gifs
         image_set = []
-        n = 100
+        n = 10
         for idx in range(n):
             print(" [*] generate pic %d" % idx)
-            z_sample = np.random.uniform(-1, 1, size=(config.sample_num, dcgan.z_dim))
+            z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
             image_set.append(sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
             make_gif(image_set[-1], './samples/opt4_test_gif_%s.gif' % (idx))
 
@@ -166,6 +168,3 @@ def image_manifold_size(num_images):
     manifold_w = int(np.ceil(np.sqrt(num_images)))
     assert manifold_h * manifold_w == num_images
     return manifold_h, manifold_w
-
-
-

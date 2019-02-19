@@ -64,6 +64,15 @@ def deconv2d(x, output_shape, name="deconv2d"):
         return deconv
 
 
+def conv_out_size(h, w, stride_h, stride_w):
+    """Calculate the output size from conv layer
+    Every time divide h,w by the stride sizes in h,w
+    """
+    h = int(math.ceil(float(h) / float(stride_h)))
+    w = int(math.ceil(float(w) / float(stride_w)))
+    return h,w
+
+
 def lrelu(x, leak=0.2, name="lrelu"):
     """Leaky ReLU
     """

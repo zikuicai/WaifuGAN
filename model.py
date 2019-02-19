@@ -10,15 +10,9 @@ from ops import *
 from utils import *
 
 
-def conv_out_size_same(h, w, stride_h, stride_w):
-    h = int(math.ceil(float(h) / float(stride_h)))
-    w = int(math.ceil(float(w) / float(stride_w)))
-    return h,w
-
-
 class DCGAN(object):
     def __init__(self, sess, input_height=108, input_width=108, crop=True,
-                 batch_size=64, sample_num=64, output_height=64, output_width=64,
+                 batch_size=64, output_height=64, output_width=64,
                  z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3,
                  data_dir='default', input_fname_pattern='*.jpg', checkpoint_dir=None, sample_dir=None):
         """Initialize some default parameters.
@@ -38,7 +32,6 @@ class DCGAN(object):
         self.crop = crop
 
         self.batch_size = batch_size
-        self.sample_num = sample_num
 
         self.input_height = input_height
         self.input_width = input_width
@@ -150,10 +143,10 @@ class DCGAN(object):
         self.writer = SummaryWriter("./logs", self.sess.graph)
         # merge the variables that are related to generator and discriminator
 
-        sample_z = np.random.uniform(-1, 1, size=(self.sample_num, self.z_dim))
+        sample_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
         # initialize the noise
 
-        sample_files = self.data[0:self.sample_num]
+        sample_files = self.data[0:self.batch_size]
         sample = [get_image2(sample_file, self.input_width, self.input_height) 
                   for sample_file in sample_files]
         if (self.grayscale):
@@ -212,7 +205,7 @@ class DCGAN(object):
                 errG = self.g_loss.eval({self.z: batch_z})
 
                 counter += 1
-                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f"
+                print("Epoch: [%4d] batches: [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f"
                       % (epoch + 1, idx, batch_idxs,
                          time.time() - start_time, errD_fake+errD_real, errG))
 
@@ -258,10 +251,10 @@ class DCGAN(object):
             # size of the output image, no matter how big the output image is
             s_h0, s_w0 = self.output_height, self.output_width
             # size of the filter in each one of the 4 layers
-            s_h1, s_w1 = conv_out_size_same(s_h0, s_w0, 2, 2)
-            s_h2, s_w2 = conv_out_size_same(s_h1, s_w1, 2, 2)
-            s_h3, s_w3 = conv_out_size_same(s_h2, s_w2, 2, 2)
-            s_h4, s_w4 = conv_out_size_same(s_h3, s_w3, 2, 2)
+            s_h1, s_w1 = conv_out_size(s_h0, s_w0, 2, 2)
+            s_h2, s_w2 = conv_out_size(s_h1, s_w1, 2, 2)
+            s_h3, s_w3 = conv_out_size(s_h2, s_w2, 2, 2)
+            s_h4, s_w4 = conv_out_size(s_h3, s_w3, 2, 2)
 
             # project z to z1 and reshape
             z1 = dense(z, self.gf_dim * 8 * s_h4 * s_w4, 'g_h0_dense')
@@ -293,10 +286,10 @@ class DCGAN(object):
             scope.reuse_variables()
 
             s_h0, s_w0 = self.output_height, self.output_width
-            s_h1, s_w1 = conv_out_size_same(s_h0, s_w0, 2, 2)
-            s_h2, s_w2 = conv_out_size_same(s_h1, s_w1, 2, 2)
-            s_h3, s_w3 = conv_out_size_same(s_h2, s_w2, 2, 2)
-            s_h4, s_w4 = conv_out_size_same(s_h3, s_w3, 2, 2)
+            s_h1, s_w1 = conv_out_size(s_h0, s_w0, 2, 2)
+            s_h2, s_w2 = conv_out_size(s_h1, s_w1, 2, 2)
+            s_h3, s_w3 = conv_out_size(s_h2, s_w2, 2, 2)
+            s_h4, s_w4 = conv_out_size(s_h3, s_w3, 2, 2)
 
             z1 = dense(z, self.gf_dim * 8 * s_h4 * s_w4, 'g_h0_dense')
             h0 = tf.reshape(z1, [-1, s_h4, s_w4, self.gf_dim * 8])
