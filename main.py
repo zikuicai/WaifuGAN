@@ -67,8 +67,7 @@ def main(_):
                 raise Exception("[!] Train a model first, then run test mode")
 
         # Below is codes for visualization
-        option = 0
-        visualize(sess, dcgan, FLAGS, option)
+        visualize(sess, dcgan, FLAGS)
 
 
 if __name__ == '__main__':

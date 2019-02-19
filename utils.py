@@ -132,34 +132,18 @@ def make_gif(images, fname, duration=2, true_image=False):
     clip.write_gif(fname, fps=len(images) / duration)
 
 
-def visualize(sess, dcgan, config, option):
-    # option=0, generate one batch of images and save
-
+def visualize(sess, dcgan, config):
     image_frame_dim = int(math.ceil(config.batch_size**.5))
     # set the checkerboard dimension to be the square root of batch size
     
-    if option == 0:
-        # generate n x batch-size images and save them in the samples folder
-        n = 10
-        for idx in range(n):
-            print(" [*] generating pic %d" % idx)
-            z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
-            samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-            save_images(samples, [image_frame_dim, image_frame_dim],
-                        './samples/opt0_test_arange_%s.png' % (idx))
-    elif option == 1:
-        # generate gifs
-        image_set = []
-        n = 10
-        for idx in range(n):
-            print(" [*] generating pic %d" % idx)
-            z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
-            image_set.append(sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
-            make_gif(image_set[-1], './samples/opt4_test_gif_%s.gif' % (idx))
-
-        new_image_set = [merge(np.array([images[idx] for images in image_set]), [10, 10])
-                         for idx in range(64)]
-        make_gif(new_image_set, './samples/opt4_test_gif_merged.gif', duration=8)
+    # generate n x batch-size images and save them in the samples folder
+    n = 10
+    for idx in range(n):
+        print(" [*] generating pic %d" % idx)
+        z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
+        samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
+        save_images(samples, [image_frame_dim, image_frame_dim],
+                    './samples/opt0_test_arange_%s.png' % (idx))
 
 
 def image_manifold_size(num_images):
