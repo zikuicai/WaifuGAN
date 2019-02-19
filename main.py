@@ -18,7 +18,7 @@ flags.DEFINE_integer("input_width", None, "The size of image to use (will be cen
 flags.DEFINE_integer("output_height", 300, "The size of the output images to produce [64]")
 flags.DEFINE_integer("output_width", None, "The size of the output images to produce. "
                                            "If None, same value as output_height [None]")
-flags.DEFINE_string("data_dir", "../imgs_galaxy", "The path of images")
+flags.DEFINE_string("data_dir", "../imgs_galaxy_300", "The path of images")
 flags.DEFINE_string("input_fname_pattern", "*.jpg", "Glob pattern of filename of input images [*]")
 
 flags.DEFINE_string("checkpoint_dir", "./checkpoint", "Directory name to save the checkpoints [checkpoint]")
