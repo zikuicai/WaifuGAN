@@ -209,25 +209,25 @@ class DCGAN(object):
                       % (epoch + 1, idx + 1, batch_idxs,
                          time.time() - start_time, errD_fake+errD_real, errG))
 
-            if epoch % 10 == 9:
-                # save generated sample images every 10 epoches
-                try:
-                    samples, d_loss, g_loss = self.sess.run(
-                        [self.sampler, self.d_loss, self.g_loss],
-                        feed_dict={
-                            self.z: sample_z,
-                            self.inputs: sample_inputs,
-                        },
-                    )
-                    save_images(samples, image_manifold_size(samples.shape[0]),
-                                './{}/train_{:04d}.png'.format(config.sample_dir, epoch))
-                    print("[Sample] d_loss: %.8f, g_loss: %.8f" %(d_loss, g_loss))
-                except:
-                    print("save pic error!...")
+            # if epoch % 10 == 9:
+            # save generated sample images every 10 epoches
+            try:
+                samples, d_loss, g_loss = self.sess.run(
+                    [self.sampler, self.d_loss, self.g_loss],
+                    feed_dict={
+                        self.z: sample_z,
+                        self.inputs: sample_inputs,
+                    },
+                )
+                save_images(samples, image_manifold_size(samples.shape[0]),
+                            './{}/train_{:04d}.png'.format(config.sample_dir, epoch))
+                print("[Sample] d_loss: %.8f, g_loss: %.8f" %(d_loss, g_loss))
+            except:
+                print("save pic error!...")
             
-            if epoch % 20 == 9:
-                # save checkpoint every 20 epochs
-                self.save(config.checkpoint_dir, counter)
+            # if epoch % 20 == 9:
+            # save checkpoint every 20 epochs
+            self.save(config.checkpoint_dir, counter)
 
 
     def discriminator(self, image, reuse=False):
