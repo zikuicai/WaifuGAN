@@ -154,10 +154,8 @@ class DCGAN(object):
         # initialize the noise
 
         sample_files = self.data[0:self.sample_num]
-        sample = [
-            get_image2(sample_file,
-                      input_height=self.input_height,
-                      input_width=self.input_width) for sample_file in sample_files]
+        sample = [get_image2(sample_file, self.input_width, self.input_height) 
+                  for sample_file in sample_files]
         if (self.grayscale):
             sample_inputs = np.array(sample).astype(np.float32)[:, :, :, None]
         else:
@@ -183,10 +181,8 @@ class DCGAN(object):
 
             for idx in range(0, batch_idxs):
                 batch_files = self.data[idx *config.batch_size:(idx+1)*config.batch_size]
-                batch = [
-                    get_image2(batch_file,
-                              input_height=self.input_height,
-                              input_width=self.input_width) for batch_file in batch_files]
+                batch = [get_image2(batch_file, self.input_width, self.input_height) 
+                         for batch_file in batch_files]
                 if self.grayscale:
                     batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
                 else:
