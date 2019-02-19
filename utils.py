@@ -3,7 +3,6 @@ import math
 import random
 import scipy.misc
 import numpy as np
-from time import gmtime, strftime
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
@@ -28,6 +27,13 @@ def get_image(image_path, input_height, input_width,
     image = imread(image_path, grayscale)
     return transform(image, input_height, input_width,
                      resize_height, resize_width, crop)
+
+def get_image2(image_path, w, h):
+    """Use random crop to get 400x400 image
+    """
+    image = imread(image_path)
+    cropped_image = random_crop(image, w, h)
+    return cropped_image
 
 
 def imsave(images, size, path):
@@ -62,6 +68,15 @@ def merge(images, size):
     else:
         raise ValueError('in merge(images,size) images parameter '
                          'must have dimensions: HxW or HxWx3 or HxWx4')
+
+
+def random_crop(img, width, height):
+    assert img.shape[0] >= height
+    assert img.shape[1] >= width
+    x = random.randint(0, img.shape[1] - width)
+    y = random.randint(0, img.shape[0] - height)
+    img = img[y:y+height, x:x+width]
+    return img
 
 
 def center_crop(x, crop_h, crop_w, resize_h=64, resize_w=64):
@@ -116,77 +131,32 @@ def make_gif(images, fname, duration=2, true_image=False):
 
 
 def visualize(sess, dcgan, config, option):
-    # 5 options from 0 - 4
     # option=0, generate one batch of images and save
-    # option=1, 
-    # option=2
-    # option=3
-    # option=4
-
 
     image_frame_dim = int(math.ceil(config.batch_size**.5))
     # set the checkerboard dimension to be the square root of batch size
+    
     if option == 0:
-        z_sample = np.random.uniform(-0.5, 0.5,
-                                     size=(config.batch_size, dcgan.z_dim))
-        samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-        save_images(samples, [image_frame_dim, image_frame_dim],
-                    './samples/opt0_test_%s.png' % strftime("%Y%m%d%H%M%S", gmtime()))
-    elif option == 1:
-        values = np.arange(0, 1, 1./config.batch_size)
-        for idx in range(100):
-            print(" [*] %d" % idx)
-            z_sample = np.zeros([config.batch_size, dcgan.z_dim])
-            for kdx, z in enumerate(z_sample):
-                z[idx] = values[kdx]
-
+        # generate n x batch-size images and save them in the samples folder
+        n = 100
+        for idx in range(n):
+            print(" [*] generate pic %d" % idx)
+            z_sample = np.random.uniform(-1, 1, size=(config.sample_num, dcgan.z_dim))
             samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-
             save_images(samples, [image_frame_dim, image_frame_dim],
-                        './samples/opt1_test_arange_%s.png' % (idx))
-    elif option == 2:
-        values = np.arange(0, 1, 1./config.batch_size)
-        for idx in [random.randint(0, 99) for _ in range(100)]:
-            print(" [*] %d" % idx)
-            z = np.random.uniform(-0.2, 0.2, size=(dcgan.z_dim))
-            z_sample = np.tile(z, (config.batch_size, 1))
-            #z_sample = np.zeros([config.batch_size, dcgan.z_dim])
-            for kdx, z in enumerate(z_sample):
-                z[idx] = values[kdx]
-
-            samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-
-            try:
-                make_gif(samples, './samples/opt2_test_gif_%s.gif' % (idx))
-            except:
-                save_images(samples, [image_frame_dim, image_frame_dim],
-                            './samples/opt2_test_%s.png' % strftime("%Y%m%d%H%M%S", gmtime()))
-    elif option == 3:
-        values = np.arange(0, 1, 1./config.batch_size)
-        for idx in range(100):
-            print(" [*] %d" % idx)
-            z_sample = np.zeros([config.batch_size, dcgan.z_dim])
-            for kdx, z in enumerate(z_sample):
-                z[idx] = values[kdx]
-
-            samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-            make_gif(samples, './samples/opt3_test_gif_%s.gif' % (idx))
-    elif option == 4:
+                        './samples/opt0_test_arange_%s.png' % (idx))
+    elif option == 1:
+        # generate gifs
         image_set = []
-        values = np.arange(0, 1, 1./config.batch_size)
-
-        for idx in range(100):
-            print(" [*] %d" % idx)
-            z_sample = np.zeros([config.batch_size, dcgan.z_dim])
-            for kdx, z in enumerate(z_sample):
-                z[idx] = values[kdx]
-
-            image_set.append(
-                sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
+        n = 100
+        for idx in range(n):
+            print(" [*] generate pic %d" % idx)
+            z_sample = np.random.uniform(-1, 1, size=(config.sample_num, dcgan.z_dim))
+            image_set.append(sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
             make_gif(image_set[-1], './samples/opt4_test_gif_%s.gif' % (idx))
 
         new_image_set = [merge(np.array([images[idx] for images in image_set]), [10, 10])
-                         for idx in range(64) + range(63, -1, -1)]
+                         for idx in range(64)]
         make_gif(new_image_set, './samples/opt4_test_gif_merged.gif', duration=8)
 
 
@@ -196,3 +166,6 @@ def image_manifold_size(num_images):
     manifold_w = int(np.ceil(np.sqrt(num_images)))
     assert manifold_h * manifold_w == num_images
     return manifold_h, manifold_w
+
+
+

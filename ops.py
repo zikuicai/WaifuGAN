@@ -2,8 +2,6 @@ import math
 import numpy as np
 import tensorflow as tf
 
-from tensorflow.python.framework import ops
-
 from utils import *
 
 # for compatibility between different tf versions
@@ -72,17 +70,18 @@ def lrelu(x, leak=0.2, name="lrelu"):
     return tf.maximum(x, leak*x)
 
 
-def dense(input_, output_size, scope=None, bias_start=0.0, with_w=False):
+def dense(x, output_size, scope=None, with_w=False):
     """Densely connected layer
     """
-    shape = input_.get_shape().as_list()
+    shape = x.get_shape().as_list()
 
     with tf.variable_scope(scope or "Dense"):
         matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
                                  tf.random_normal_initializer(stddev=0.02))
         bias = tf.get_variable("bias", [output_size],
-                               initializer=tf.constant_initializer(bias_start))
-        return tf.matmul(input_, matrix) + bias
+                               initializer=tf.constant_initializer(0.0))
+        return tf.matmul(x, matrix) + bias
+
 
 def loss(x, y):
     """Cost function

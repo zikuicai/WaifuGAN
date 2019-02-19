@@ -10,8 +10,10 @@ from ops import *
 from utils import *
 
 
-def conv_out_size_same(size, stride):
-    return int(math.ceil(float(size) / float(stride)))
+def conv_out_size_same(h, w, stride_h, stride_w):
+    h = int(math.ceil(float(h) / float(stride_h)))
+    w = int(math.ceil(float(w) / float(stride_w)))
+    return h,w
 
 
 class DCGAN(object):
@@ -153,13 +155,9 @@ class DCGAN(object):
 
         sample_files = self.data[0:self.sample_num]
         sample = [
-            get_image(sample_file,
+            get_image2(sample_file,
                       input_height=self.input_height,
-                      input_width=self.input_width,
-                      resize_height=self.output_height,
-                      resize_width=self.output_width,
-                      crop=self.crop,
-                      grayscale=self.grayscale) for sample_file in sample_files]
+                      input_width=self.input_width) for sample_file in sample_files]
         if (self.grayscale):
             sample_inputs = np.array(sample).astype(np.float32)[:, :, :, None]
         else:
@@ -186,13 +184,9 @@ class DCGAN(object):
             for idx in range(0, batch_idxs):
                 batch_files = self.data[idx *config.batch_size:(idx+1)*config.batch_size]
                 batch = [
-                    get_image(batch_file,
+                    get_image2(batch_file,
                               input_height=self.input_height,
-                              input_width=self.input_width,
-                              resize_height=self.output_height,
-                              resize_width=self.output_width,
-                              crop=self.crop,
-                              grayscale=self.grayscale) for batch_file in batch_files]
+                              input_width=self.input_width) for batch_file in batch_files]
                 if self.grayscale:
                     batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
                 else:
@@ -226,32 +220,31 @@ class DCGAN(object):
                       % (epoch + 1, idx, batch_idxs,
                          time.time() - start_time, errD_fake+errD_real, errG))
 
-                if np.mod(counter, 100) == 1:
-                    # save generated sample images every 100 batches
-                    try:
-                        samples, d_loss, g_loss = self.sess.run(
-                            [self.sampler, self.d_loss, self.g_loss],
-                            feed_dict={
-                                self.z: sample_z,
-                                self.inputs: sample_inputs,
-                            },
-                        )
-                        save_images(samples, image_manifold_size(samples.shape[0]),
-                                    './{}/train_{:02d}_{:04d}.png'.format(config.sample_dir, epoch, idx))
-                        print("[Sample] d_loss: %.8f, g_loss: %.8f" %
-                              (d_loss, g_loss))
-                    except:
-                        print("one pic error!...")
 
-                if np.mod(counter, 500) == 2:
-                    # save checkpoint every 500 batches
-                    self.save(config.checkpoint_dir, counter)
+            # save generated sample images every epoch
+            try:
+                samples, d_loss, g_loss = self.sess.run(
+                    [self.sampler, self.d_loss, self.g_loss],
+                    feed_dict={
+                        self.z: sample_z,
+                        self.inputs: sample_inputs,
+                    },
+                )
+                save_images(samples, image_manifold_size(samples.shape[0]),
+                            './{}/train_{:04d}.png'.format(config.sample_dir, epoch))
+                print("[Sample] d_loss: %.8f, g_loss: %.8f" %(d_loss, g_loss))
+            except:
+                print("save pic error!...")
+            
+            # save checkpoint every epoch
+            self.save(config.checkpoint_dir, counter)
+
 
     def discriminator(self, image, reuse=False):
         with tf.variable_scope("discriminator") as scope:
             if reuse:
                 scope.reuse_variables()
-            # last dimension of output: h0 is 64, h3 is 512
+            
             h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
             h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
             h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
@@ -260,68 +253,72 @@ class DCGAN(object):
             # return the probability and logits
             return tf.nn.sigmoid(h4), h4
 
+
     def generator(self, z):
+        """4 layers of convolution
+        """
+        # generator is the reverse of discriminator
         with tf.variable_scope("generator") as scope:
-            # generator is the reverse of discriminator
-            s_h, s_w = self.output_height, self.output_width
-            s_h2, s_w2 = conv_out_size_same(s_h, 2), conv_out_size_same(s_w, 2)
-            s_h4, s_w4 = conv_out_size_same(s_h2, 2), conv_out_size_same(s_w2, 2)
-            s_h8, s_w8 = conv_out_size_same(s_h4, 2), conv_out_size_same(s_w4, 2)
-            s_h16, s_w16 = conv_out_size_same(s_h8, 2), conv_out_size_same(s_w8, 2)
+            # size of the output image, no matter how big the output image is
+            s_h0, s_w0 = self.output_height, self.output_width
+            # size of the filter in each one of the 4 layers
+            s_h1, s_w1 = conv_out_size_same(s_h0, s_w0, 2, 2)
+            s_h2, s_w2 = conv_out_size_same(s_h1, s_w1, 2, 2)
+            s_h3, s_w3 = conv_out_size_same(s_h2, s_w2, 2, 2)
+            s_h4, s_w4 = conv_out_size_same(s_h3, s_w3, 2, 2)
 
-            # project `z` and reshape
-            z_ = dense(z, self.gf_dim*8*s_h16*s_w16, 'g_h0_dense')
-
-            h0 = tf.reshape(z_, [-1, s_h16, s_w16, self.gf_dim * 8])
+            # project z to z1 and reshape
+            z1 = dense(z, self.gf_dim * 8 * s_h4 * s_w4, 'g_h0_dense')
+            h0 = tf.reshape(z1, [-1, s_h4, s_w4, self.gf_dim * 8])
             h0 = tf.nn.relu(self.g_bn0(h0))
 
-            h1 = deconv2d(h0, [self.batch_size, s_h8, s_w8, 
-                               self.gf_dim*4], name='g_h1')
+            # following are 4 convolutional layers
+            h1 = deconv2d(h0, [self.batch_size, s_h3, s_w3, 
+                               self.gf_dim * 4], name='g_h1')
             h1 = tf.nn.relu(self.g_bn1(h1))
 
-            h2 = deconv2d(h1, [self.batch_size, s_h4, s_w4, 
-                               self.gf_dim*2], name='g_h2')
+            h2 = deconv2d(h1, [self.batch_size, s_h2, s_w2, 
+                               self.gf_dim * 2], name='g_h2')
             h2 = tf.nn.relu(self.g_bn2(h2))
 
-            h3 = deconv2d(h2, [self.batch_size, s_h2, s_w2, 
-                               self.gf_dim*1], name='g_h3')
+            h3 = deconv2d(h2, [self.batch_size, s_h1, s_w1, 
+                               self.gf_dim * 1], name='g_h3')
             h3 = tf.nn.relu(self.g_bn3(h3))
 
-            h4 = deconv2d(h3, [self.batch_size, s_h, s_w, 
+            h4 = deconv2d(h3, [self.batch_size, s_h0, s_w0, 
                                self.c_dim], name='g_h4')
 
             return tf.nn.tanh(h4)
 
+
     def sampler(self, z):
-        # sampler is just a copy of generator without updating variables
+        # sampler is just a copy of generator without training
         with tf.variable_scope("generator") as scope:
             scope.reuse_variables()
 
-            s_h, s_w = self.output_height, self.output_width
-            s_h2, s_w2 = conv_out_size_same(s_h, 2), conv_out_size_same(s_w, 2)
-            s_h4, s_w4 = conv_out_size_same(s_h2, 2), conv_out_size_same(s_w2, 2)
-            s_h8, s_w8 = conv_out_size_same(s_h4, 2), conv_out_size_same(s_w4, 2)
-            s_h16, s_w16 = conv_out_size_same(s_h8, 2), conv_out_size_same(s_w8, 2)
+            s_h0, s_w0 = self.output_height, self.output_width
+            s_h1, s_w1 = conv_out_size_same(s_h0, s_w0, 2, 2)
+            s_h2, s_w2 = conv_out_size_same(s_h1, s_w1, 2, 2)
+            s_h3, s_w3 = conv_out_size_same(s_h2, s_w2, 2, 2)
+            s_h4, s_w4 = conv_out_size_same(s_h3, s_w3, 2, 2)
 
-            # project `z` and reshape
-            h0 = tf.reshape(
-                dense(z, self.gf_dim*8*s_h16*s_w16, 'g_h0_dense'),
-                [-1, s_h16, s_w16, self.gf_dim * 8])
+            z1 = dense(z, self.gf_dim * 8 * s_h4 * s_w4, 'g_h0_dense')
+            h0 = tf.reshape(z1, [-1, s_h4, s_w4, self.gf_dim * 8])
             h0 = tf.nn.relu(self.g_bn0(h0, train=False))
 
-            h1 = deconv2d(h0, [self.batch_size, s_h8, s_w8,
-                               self.gf_dim*4], name='g_h1')
+            h1 = deconv2d(h0, [self.batch_size, s_h3, s_w3, 
+                               self.gf_dim * 4], name='g_h1')
             h1 = tf.nn.relu(self.g_bn1(h1, train=False))
 
-            h2 = deconv2d(h1, [self.batch_size, s_h4, s_w4,
-                               self.gf_dim*2], name='g_h2')
+            h2 = deconv2d(h1, [self.batch_size, s_h2, s_w2, 
+                               self.gf_dim * 2], name='g_h2')
             h2 = tf.nn.relu(self.g_bn2(h2, train=False))
 
-            h3 = deconv2d(h2, [self.batch_size, s_h2, s_w2,
-                               self.gf_dim*1], name='g_h3')
+            h3 = deconv2d(h2, [self.batch_size, s_h1, s_w1, 
+                               self.gf_dim * 1], name='g_h3')
             h3 = tf.nn.relu(self.g_bn3(h3, train=False))
 
-            h4 = deconv2d(h3, [self.batch_size, s_h, s_w, 
+            h4 = deconv2d(h3, [self.batch_size, s_h0, s_w0, 
                                self.c_dim], name='g_h4')
 
             return tf.nn.tanh(h4)
