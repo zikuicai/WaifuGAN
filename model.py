@@ -58,8 +58,8 @@ class DCGAN(object):
         self.data_dir = data_dir
         self.input_fname_pattern = input_fname_pattern
         self.checkpoint_dir = checkpoint_dir
+        print(os.path.join(self.data_dir, self.input_fname_pattern))
         self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
-
         imreadImg = imread(self.data[0])
         if len(imreadImg.shape) >= 3:  # check color channel number
             self.c_dim = imread(self.data[0]).shape[-1]
