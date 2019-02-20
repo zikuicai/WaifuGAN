@@ -5,7 +5,7 @@ Downloads the following:
 - Celeb-A dataset
 - LSUN dataset
 - MNIST dataset
-- Anime Faces dataset 
+- Anime-Faces dataset 
 
 
 As for anime_faces dataset, it is collected by https://github.com/jayleicn/animeGAN
@@ -31,8 +31,8 @@ from tqdm import tqdm
 from six.moves import urllib
 
 parser = argparse.ArgumentParser(description='Download dataset for DCGAN.')
-parser.add_argument('datasets', metavar='N', type=str, nargs='+', choices=['anime_faces', 'celebA', 'lsun', 'mnist'],
-           help='name of dataset to download [anime_faces, celebA, lsun, mnist]')
+parser.add_argument('datasets', metavar='N', type=str, nargs='+', choices=['anime-faces', 'celebA', 'lsun', 'mnist'],
+           help='name of dataset to download [anime-faces, celebA, lsun, mnist]')
 
 def download(url, dirpath):
   filename = url.split('/')[-1]
@@ -117,9 +117,9 @@ def download_celeb_a(dirpath):
   os.rename(os.path.join(dirpath, zip_dir), os.path.join(dirpath, data_dir))
 
 def download_anime_faces(dirpath):
-  data_dir = 'anime_faces'
+  data_dir = 'anime-faces'
   if os.path.exists(os.path.join(dirpath, data_dir)):
-    print('Found anime_faces - skip')
+    print('Found anime-faces - skip')
     return
 
   filename, drive_id  = "anime-faces.tar.gz", "0B4wZXrs0DHMHMEl1ODVpMjRTWEk"
@@ -131,13 +131,16 @@ def download_anime_faces(dirpath):
     download_file_from_google_drive(drive_id, save_path)
 
   tar = tarfile.open(save_path, "r:gz")
-  tar.extractall(dirpath)
+  tar.extractall(dirpath+data_dir)
   tar.close()
   os.remove(save_path)
   
   clean_anime_faces(os.path.join(dirpath, data_dir))
 
 def clean_anime_faces(root):
+  """
+  move all images to the root folder and delete any non-image files
+  """
   nodes = os.listdir(root)
 
   for node in nodes:
@@ -224,7 +227,7 @@ if __name__ == '__main__':
 
   if any(name in args.datasets for name in ['CelebA', 'celebA', 'celebA']):
     download_celeb_a('./data')
-  if 'anime_faces' in args.datasets:
+  if 'anime-faces' in args.datasets:
     download_anime_faces('./data')
   if 'lsun' in args.datasets:
     download_lsun('./data')
