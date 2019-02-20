@@ -118,7 +118,8 @@ def download_celeb_a(dirpath):
 
 def download_anime_faces(dirpath):
   data_dir = 'anime-faces'
-  if os.path.exists(os.path.join(dirpath, data_dir)):
+  data_path = os.path.join(dirpath, data_dir)
+  if os.path.exists(data_path):
     print('Found anime-faces - skip')
     return
 
@@ -131,11 +132,11 @@ def download_anime_faces(dirpath):
     download_file_from_google_drive(drive_id, save_path)
 
   tar = tarfile.open(save_path, "r:gz")
-  tar.extractall(dirpath+data_dir)
+  tar.extractall(data_path)
   tar.close()
   os.remove(save_path)
   
-  clean_anime_faces(os.path.join(dirpath, data_dir))
+  clean_anime_faces(data_path)
 
 def clean_anime_faces(root):
   """
