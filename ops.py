@@ -1,7 +1,6 @@
 import math
 import numpy as np
 import tensorflow as tf
-
 from utils import *
 
 # for compatibility between different tf versions
@@ -42,25 +41,22 @@ def conv2d(x, output_dim, name="conv2d"):
     with tf.variable_scope(name):
         w = tf.get_variable('w', [5, 5, x.get_shape()[-1], output_dim],
                             initializer=tf.truncated_normal_initializer(stddev=0.02))
+        b = tf.get_variable('b', [output_dim], 
+                            initializer=tf.constant_initializer(0.0))
         conv = tf.nn.conv2d(x, w, strides=[1, 2, 2, 1], padding='SAME')
-        biases = tf.get_variable('b', [output_dim], 
-                                 initializer=tf.constant_initializer(0.0))
-        conv = tf.reshape(tf.nn.bias_add(conv, biases), conv.get_shape())
-
+        conv = tf.reshape(tf.nn.bias_add(conv, b), conv.get_shape())
         return conv
 
 
 def deconv2d(x, output_shape, name="deconv2d"):
+    # filter : [height, width, output_channels, in_channels]
     with tf.variable_scope(name):
-        # filter : [height, width, output_channels, in_channels]
         w = tf.get_variable('w', [5, 5, output_shape[-1], x.get_shape()[-1]],
                             initializer=tf.random_normal_initializer(stddev=0.02))
-        deconv = tf.nn.conv2d_transpose(x, w, output_shape=output_shape,
-                                        strides=[1, 2, 2, 1])
-        biases = tf.get_variable('b', [output_shape[-1]], 
-                                 initializer=tf.constant_initializer(0.0))
-        deconv = tf.reshape(tf.nn.bias_add(deconv, biases), deconv.get_shape())
-
+        b = tf.get_variable('b', [output_shape[-1]], 
+                            initializer=tf.constant_initializer(0.0))
+        deconv = tf.nn.conv2d_transpose(x, w, output_shape=output_shape, strides=[1, 2, 2, 1])
+        deconv = tf.reshape(tf.nn.bias_add(deconv, b), deconv.get_shape())
         return deconv
 
 
@@ -73,18 +69,16 @@ def conv_out_size(h, w, stride_h, stride_w):
     return h,w
 
 
-def lrelu(x, leak=0.2, name="lrelu"):
-    """Leaky ReLU
-    """
-    return tf.maximum(x, leak*x)
+def lrelu(x, alpha=0.2, name="lrelu"):
+    return tf.nn.leaky_relu(x, alpha, name=name)
 
 
-def dense(x, output_size, scope=None, with_w=False):
+def dense(x, output_size, name='dense'):
     """Densely connected layer
     """
     shape = x.get_shape().as_list()
 
-    with tf.variable_scope(scope or "Dense"):
+    with tf.variable_scope(name):
         matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
                                  tf.random_normal_initializer(stddev=0.02))
         bias = tf.get_variable("bias", [output_size],

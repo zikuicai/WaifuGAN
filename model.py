@@ -26,7 +26,7 @@ class DCGAN(object):
           df_dim: (optional) Dimension of discriminator filters in the first conv layer. [64]
           gfc_dim: (optional) Dimension of gen units for for fully connected layer. [1024]
           dfc_dim: (optional) Dimension of discrim units for fully connected layer. [1024]
-          c_dim: (optional) Dimension of image color. For grayscale input, set to 1. [3]
+          c_dim: (optional) Dimension of image color. [3]
         """
         self.sess = sess
         self.crop = crop
@@ -58,15 +58,8 @@ class DCGAN(object):
         self.data_dir = data_dir
         self.input_fname_pattern = input_fname_pattern
         self.checkpoint_dir = checkpoint_dir
-        print(os.path.join(self.data_dir, self.input_fname_pattern))
         self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
         imreadImg = imread(self.data[0])
-        if len(imreadImg.shape) >= 3:  # check color channel number
-            self.c_dim = imread(self.data[0]).shape[-1]
-        else:
-            self.c_dim = 1
-
-        self.grayscale = (self.c_dim == 1)
 
         self.build_model()
 
@@ -92,10 +85,10 @@ class DCGAN(object):
         self.d_fake, self.d_fake_logits = self.discriminator(self.g, reuse=True)
         # D_ is the probability that fake images being recognized as real
 
-        self.z_smry = histogram_summary("z", self.z)
-        self.d_real_smry = histogram_summary("d_real", self.d_real)
-        self.d_fake_smry = histogram_summary("d_fake", self.d_fake)
-        self.g_smry = image_summary("g", self.g)
+        self.z_summary = histogram_summary("z", self.z)
+        self.d_real_summary = histogram_summary("d_real", self.d_real)
+        self.d_fake_summary = histogram_summary("d_fake", self.d_fake)
+        self.g_summary = image_summary("g", self.g)
 
         self.d_loss_real = tf.reduce_mean(
             loss(self.d_real_logits, tf.ones_like(self.d_real)))
@@ -116,10 +109,10 @@ class DCGAN(object):
             loss(self.d_fake_logits, tf.ones_like(self.d_fake)))
         # the loss for generator to make real enough iamges
 
-        self.d_loss_real_smry = scalar_summary("d_loss_real", self.d_loss_real)
-        self.d_loss_fake_smry = scalar_summary("d_loss_fake", self.d_loss_fake)
-        self.d_loss_smry = scalar_summary("d_loss", self.d_loss)
-        self.g_loss_smry = scalar_summary("g_loss", self.g_loss)
+        self.d_loss_real_summary = scalar_summary("d_loss_real", self.d_loss_real)
+        self.d_loss_fake_summary = scalar_summary("d_loss_fake", self.d_loss_fake)
+        self.d_loss_summary = scalar_summary("d_loss", self.d_loss)
+        self.g_loss_summary = scalar_summary("g_loss", self.g_loss)
 
         t_vars = tf.trainable_variables()  # define all variables
 
@@ -129,30 +122,29 @@ class DCGAN(object):
         self.saver = tf.train.Saver()  # save trained variables
 
     def train(self, config):  # define the optimizer for discriminator and generator
-        d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+        
+        # setup optimizer
+        d_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
-        g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+        g_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.g_loss, var_list=self.g_vars)
 
         tf.initializers.global_variables().run()
 
-        self.g_smry = merge_summary([self.z_smry, self.d_fake_smry,
-                                    self.g_smry, self.d_loss_fake_smry, self.g_loss_smry])
-        self.d_smry = merge_summary(
-            [self.z_smry, self.d_real_smry, self.d_loss_real_smry, self.d_loss_smry])
+        # merge the variables related to generator and discriminator
+        self.g_summary = merge_summary([self.z_summary, self.d_fake_summary,
+                                    self.g_summary, self.d_loss_fake_summary, self.g_loss_summary])
+        self.d_summary = merge_summary(
+            [self.z_summary, self.d_real_summary, self.d_loss_real_summary, self.d_loss_summary])
         self.writer = SummaryWriter("./logs", self.sess.graph)
-        # merge the variables that are related to generator and discriminator
 
+        # initialize noise that uniformly distributes between -1 and 1
         sample_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
-        # initialize the noise
 
         sample_files = self.data[0:self.batch_size]
         sample = [get_image2(sample_file, self.input_width, self.input_height) 
                   for sample_file in sample_files]
-        if (self.grayscale):
-            sample_inputs = np.array(sample).astype(np.float32)[:, :, :, None]
-        else:
-            sample_inputs = np.array(sample).astype(np.float32)
+        sample_inputs = np.array(sample).astype(np.float32)
 
         counter = 1
         # number of batches has trained on
@@ -176,27 +168,23 @@ class DCGAN(object):
                 batch_files = self.data[idx *config.batch_size:(idx+1)*config.batch_size]
                 batch = [get_image2(batch_file, self.input_width, self.input_height) 
                          for batch_file in batch_files]
-                if self.grayscale:
-                    batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
-                else:
-                    batch_images = np.array(batch).astype(np.float32)
-
+                batch_images = np.array(batch).astype(np.float32)
                 batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
                     .astype(np.float32)
 
                 # Update D network
                 _, summary_str = self.sess.run(
-                    [d_optim, self.d_smry],
+                    [d_optimizer, self.d_summary],
                     feed_dict={self.inputs: batch_images, self.z: batch_z})
                 self.writer.add_summary(summary_str, counter)
 
                 # Update G network
-                _, summary_str = self.sess.run([g_optim, self.g_smry],
+                _, summary_str = self.sess.run([g_optimizer, self.g_summary],
                                                feed_dict={self.z: batch_z})
                 self.writer.add_summary(summary_str, counter)
 
-                # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                _, summary_str = self.sess.run([g_optim, self.g_smry],
+                # Run g_optimizer twice to make sure that d_loss does not go to zero (different from paper)
+                _, summary_str = self.sess.run([g_optimizer, self.g_summary],
                                                feed_dict={self.z: batch_z})
                 self.writer.add_summary(summary_str, counter)
 
@@ -230,16 +218,31 @@ class DCGAN(object):
             self.save(config.checkpoint_dir, counter)
 
 
-    def discriminator(self, image, reuse=False):
+    def discriminator(self, x, reuse=False):
         with tf.variable_scope("discriminator") as scope:
             if reuse:
                 scope.reuse_variables()
             
-            h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
-            h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
-            h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
-            h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, name='d_h3_conv')))
-            h4 = dense(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h4_dense')
+            # conv2d, batch_norm, leaky_relu
+
+            h0 = conv2d(x, self.df_dim, name='d_h0_conv')
+            h0 = tf.nn.leaky_relu(h0)
+            
+            h1 = conv2d(h0, self.df_dim*2, name='d_h1_conv')
+            h1 = self.d_bn1(h1)
+            h1 = lrelu(h1)
+
+            h2 = conv2d(h1, self.df_dim*4, name='d_h2_conv')
+            h2 = self.d_bn2(h2)
+            h2 = lrelu(h2)
+
+            h3 = conv2d(h2, self.df_dim*8, name='d_h3_conv')
+            h3 = self.d_bn3(h3)
+            h3 = lrelu(h3)
+
+            h4 = tf.reshape(h3, [self.batch_size, -1])
+            h4 = dense(h4, 1, name='d_h4_dense')
+            
             # return the probability and logits
             return tf.nn.sigmoid(h4), h4
 

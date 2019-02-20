@@ -13,18 +13,14 @@ def show_all_variables():
     slim.model_analyzer.analyze_vars(model_vars, print_info=True)
 
 
-def imread(path, grayscale=False):
-    if (grayscale):
-        return scipy.misc.imread(path, flatten=True).astype(np.float)
-        # flattens the color layers into a single gray-scale layer.
-    else:
+def imread(path):
         return scipy.misc.imread(path).astype(np.float)
 
 
 def get_image(image_path, input_height, input_width,
               resize_height=64, resize_width=64,
-              crop=True, grayscale=False):
-    image = imread(image_path, grayscale)
+              crop=True):
+    image = imread(image_path)
     return transform(image, input_height, input_width,
                      resize_height, resize_width, crop)
 
@@ -59,13 +55,6 @@ def merge(images, size):
             i = idx % size[1]
             j = idx // size[1]
             img[j * h:j * h + h, i * w:i * w + w, :] = image
-        return img
-    elif images.shape[3] == 1:  # grayscale
-        img = np.zeros((h * size[0], w * size[1]))
-        for idx, image in enumerate(images):
-            i = idx % size[1]
-            j = idx // size[1]
-            img[j * h:j * h + h, i * w:i * w + w] = image[:, :, 0]
         return img
     else:
         raise ValueError('in merge(images,size) images parameter '
@@ -143,7 +132,7 @@ def visualize(sess, dcgan, config):
         z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
         samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
         save_images(samples, [image_frame_dim, image_frame_dim],
-                    './samples/opt0_test_arange_%s.png' % (idx))
+                    './samples/test_%04d.png' % (idx))
 
 
 def image_manifold_size(num_images):

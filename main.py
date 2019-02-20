@@ -7,7 +7,7 @@ from utils import visualize, show_all_variables
 
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 10, "Epoch to train [25]")
-flags.DEFINE_integer("batch_size", 16, "The size of batch images [64]")
+flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
 # reduce the batch_size can save some memory, it's useful when images are big
 flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
