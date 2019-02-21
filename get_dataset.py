@@ -146,7 +146,7 @@ def clean_anime_faces(root):
   nodes = os.listdir(root)
 
   for node in nodes:
-      path_node = root + node
+      path_node = os.path.join(root, node)
       if os.path.isdir(path_node):
           files = os.listdir(path_node)
           for file in files:
