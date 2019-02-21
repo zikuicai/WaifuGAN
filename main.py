@@ -6,7 +6,7 @@ from model import DCGAN
 from utils import visualize, show_all_variables
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 10, "Epoch to train [25]")
+flags.DEFINE_integer("epoch", 100, "Epoch to train [25]")
 flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
 
 flags.DEFINE_integer("input_height", 96, "The height of image to use. [96]")
@@ -27,11 +27,13 @@ flags.DEFINE_string("logs_dir", "./logs", "Directory name to save the summary lo
 flags.DEFINE_string("sample_dir", "./samples", "Directory name to save the image samples.")
 
 flags.DEFINE_boolean("train", False, "True for training, False for testing [False]")
+
 flags.DEFINE_boolean("crop", False, "True for training, False for testing [False]")
-FLAGS = flags.FLAGS
+
 
 
 def main(_):
+    print(FLAGS.train)
     if FLAGS.input_width is None:
         FLAGS.input_width = FLAGS.input_height
     if FLAGS.output_width is None:
@@ -47,6 +49,7 @@ def main(_):
     run_config.gpu_options.allow_growth=True
 
     with tf.Session(config=run_config) as sess:
+
         dcgan = DCGAN(
             sess,
             input_width=FLAGS.input_width,
@@ -60,6 +63,9 @@ def main(_):
             checkpoint_dir=FLAGS.checkpoint_dir,
             logs_dir=FLAGS.logs_dir,
             sample_dir=FLAGS.sample_dir)
+
+ 
+
 
         show_all_variables()
 
