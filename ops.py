@@ -64,7 +64,7 @@ def conv_out_size(h, w, stride_h, stride_w):
     """Calculate the output size from conv layer
     Every time divide h,w by the stride sizes in h,w
     """
-    h = int(math.ceil(float(h) / float(stride_initializer=h)))
+    h = int(math.ceil(float(h) / float(stride_h)))
     w = int(math.ceil(float(w) / float(stride_w)))
     return h,w
 
@@ -89,6 +89,7 @@ def dense(x, output_size, name='dense'):
 def loss(x, y):
     """Cost function
     Define the loss function as sigmoid_cross_entropy_with_logits
+    
 
     Returns:
       y * -log(sigmoid(x)) + (1 - y) * -log(1 - sigmoid(x))
