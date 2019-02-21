@@ -150,12 +150,12 @@ def clean_anime_faces(root):
       if os.path.isdir(path_node):
           files = os.listdir(path_node)
           for file in files:
-              source = os.path.join(root + node, file)
+              source = os.path.join(root, node, file)
               destination = os.path.join(root, file)
               name = file.split('.')[0]
               affix = file.split('.')[1]
               if affix == 'png':
-                  destination = os.path.join(root, name+'.jpg')
+                  destination = os.path.join(root, name +'.jpg')
               shutil.move(source, destination)
           os.rmdir(path_node)
       elif path_node.split('.')[-1] != 'jpg':
