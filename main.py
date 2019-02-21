@@ -22,15 +22,16 @@ flags.DEFINE_float("beta1", 0.5, "Momentum term of adam. [0.5]")
 flags.DEFINE_string("data_dir", "./data/anime-faces", "The path of images.")
 flags.DEFINE_string("input_fname_pattern", "*.jpg", "Glob pattern of filename of input images. [*.jpg]")
 
-flags.DEFINE_string("checkpoint_dir", "./result/checkpoint", "Directory name to save the checkpoints.")
-flags.DEFINE_string("sample_dir", "./result/samples", "Directory name to save the image samples.")
+flags.DEFINE_string("checkpoint_dir", "./checkpoint", "Directory name to save the checkpoints.")
+flags.DEFINE_string("logs_dir", "./logs", "Directory name to save the summary logs.")
+flags.DEFINE_string("sample_dir", "./samples", "Directory name to save the image samples.")
 
-flags.DEFINE_boolean("train", True, "True for training, False for testing [False]")
-flags.DEFINE_boolean("crop", True, "True for training, False for testing [False]")
+flags.DEFINE_boolean("train", False, "True for training, False for testing [False]")
 FLAGS = flags.FLAGS
 
 
 def main(_):
+    print(FLAGS.train)
     if FLAGS.input_width is None:
         FLAGS.input_width = FLAGS.input_height
     if FLAGS.output_width is None:
@@ -46,18 +47,7 @@ def main(_):
     run_config.gpu_options.allow_growth=True
 
     with tf.Session(config=run_config) as sess:
-        dcgan = DCGAN(
-            sess,
-            input_width=FLAGS.input_width,
-            input_height=FLAGS.input_height,
-            output_width=FLAGS.output_width,
-            output_height=FLAGS.output_height,
-            batch_size=FLAGS.batch_size,
-            data_dir=FLAGS.data_dir,
-            input_fname_pattern=FLAGS.input_fname_pattern,
-            crop=FLAGS.crop,
-            checkpoint_dir=FLAGS.checkpoint_dir,
-            sample_dir=FLAGS.sample_dir)
+        dcgan = DCGAN(sess=sess, flags=FLAGS)
 
         show_all_variables()
 

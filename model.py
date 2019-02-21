@@ -10,30 +10,34 @@ from utils import *
 
 
 class DCGAN(object):
-    def __init__(self, sess, input_height=108, input_width=108, crop=True,
-                 batch_size=64, output_height=64, output_width=64,
-                 z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3,
-                 data_dir='default', input_fname_pattern='*.jpg', checkpoint_dir=None, sample_dir=None):
+    def __init__(self, sess, flags, z_dim=100, c_dim=3, 
+                 gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024):
         """Initialize some default parameters.
 
         Args:
           sess: TensorFlow session
-          batch_size: The size of batch. Should be specified before training.
-          y_dim: (optional) Dimension of dim for conditional variable y (see paper page 10). [None]
+          flags: Some parameters defined in main.
           z_dim: (optional) Dimension of dim for random noise Z. [100]
+          c_dim: (optional) Dimension of image color. [3]
           gf_dim: (optional) Dimension of gen filters in first conv layer. [64]
           df_dim: (optional) Dimension of discriminator filters in the first conv layer. [64]
           gfc_dim: (optional) Dimension of gen units for for fully connected layer. [1024]
           dfc_dim: (optional) Dimension of discrim units for fully connected layer. [1024]
-          c_dim: (optional) Dimension of image color. [3]
+          
         """
         self.sess = sess
-        self.crop = crop
-        self.batch_size = batch_size
-        self.input_height = input_height
-        self.input_width = input_width
-        self.output_height = output_height
-        self.output_width = output_width
+        
+        self.epoch = flags.epoch
+        self.batch_size = flags.batch_size
+        self.input_height = flags.input_height
+        self.input_width = flags.input_width
+        self.output_height = flags.output_height
+        self.output_width = flags.output_width
+        self.data_dir = flags.data_dir
+        self.input_fname_pattern = flags.input_fname_pattern
+        self.sample_dir = flags.sample_dir
+        self.logs_dir = flags.logs_dir
+        self.checkpoint_dir = flags.checkpoint_dir
 
         self.z_dim = z_dim
         self.c_dim = c_dim
@@ -53,20 +57,13 @@ class DCGAN(object):
         self.g_bn2 = batch_norm(name='g_bn2')
         self.g_bn3 = batch_norm(name='g_bn3')
 
-        self.data_dir = data_dir
-        self.input_fname_pattern = input_fname_pattern
-        self.checkpoint_dir = checkpoint_dir
-        self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
-        
+        self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))        
 
         self.build_model()
 
     def build_model(self):
 
-        if self.crop:  # crop the input image into output size
-            image_dims = [self.output_height, self.output_width, self.c_dim]
-        else:
-            image_dims = [self.input_height, self.input_width, self.c_dim]
+        image_dims = [self.input_height, self.input_width, self.c_dim]
 
         self.inputs = tf.placeholder(
             tf.float32, [self.batch_size] + image_dims, name='real_images')
@@ -119,12 +116,12 @@ class DCGAN(object):
 
         self.saver = tf.train.Saver()  # save trained variables
 
-    def train(self, config):  # define the optimizer for discriminator and generator
+    def train(self, flags):  # define the optimizer for discriminator and generator
         
         # setup optimizer
-        d_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+        d_optimizer = tf.train.AdamOptimizer(flags.learning_rate, beta1=flags.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
-        g_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+        g_optimizer = tf.train.AdamOptimizer(flags.learning_rate, beta1=flags.beta1) \
             .minimize(self.g_loss, var_list=self.g_vars)
 
         tf.initializers.global_variables().run()
@@ -134,9 +131,9 @@ class DCGAN(object):
                                     self.g_summary, self.d_loss_fake_summary, self.g_loss_summary])
         self.d_summary = merge_summary(
             [self.z_summary, self.d_real_summary, self.d_loss_real_summary, self.d_loss_summary])
-        self.writer = SummaryWriter("./result/logs", self.sess.graph)
+        self.writer = SummaryWriter(self.logs_dir, self.sess.graph)
 
-        # initialize noise that uniformly distributes between -1 and 1
+        # initialize the distribution of noise
         sample_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
 
         sample_files = self.data[0:self.batch_size]
@@ -155,19 +152,19 @@ class DCGAN(object):
         else:
             print(" [!] Load failed...")
 
-        for epoch in range(config.epoch):
+        for epoch in range(self.epoch):
 
-            self.data = glob(os.path.join(config.data_dir, self.input_fname_pattern))
+            self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
             # get all images in arbitrary order
-            batch_idxs = len(self.data) // config.batch_size
+            batch_idxs = len(self.data) // self.batch_size
             # how many batches the whole data set can be divided into
 
             for idx in range(0, batch_idxs):
-                batch_files = self.data[idx *config.batch_size:(idx+1)*config.batch_size]
+                batch_files = self.data[idx *self.batch_size:(idx+1)*self.batch_size]
                 batch = [get_image(batch_file, self.input_width, self.input_height) 
                          for batch_file in batch_files]
                 batch_images = np.array(batch).astype(np.float32)
-                batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
+                batch_z = np.random.uniform(-1, 1, [self.batch_size, self.z_dim]) \
                     .astype(np.float32)
 
                 # Update D network
@@ -206,14 +203,14 @@ class DCGAN(object):
                     },
                 )
                 save_images(samples, image_manifold_size(samples.shape[0]),
-                            './{}/train_{:04d}.png'.format(config.sample_dir, epoch))
+                            './{}/train_{:04d}.png'.format(self.sample_dir, epoch))
                 print("[Sample] d_loss: %.8f, g_loss: %.8f" %(d_loss, g_loss))
             except:
                 print("save pic error!...")
             
             # if epoch % 20 == 9:
             # save checkpoint every 20 epochs
-            self.save(config.checkpoint_dir, counter)
+            self.save(self.checkpoint_dir, counter)
 
 
     def discriminator(self, x, reuse=False):
