@@ -39,6 +39,7 @@ class DCGAN(object):
         self.output_width = output_width
 
         self.z_dim = z_dim
+        self.c_dim = c_dim
         self.gf_dim = gf_dim
         self.df_dim = df_dim
         self.gfc_dim = gfc_dim
@@ -59,7 +60,7 @@ class DCGAN(object):
         self.input_fname_pattern = input_fname_pattern
         self.checkpoint_dir = checkpoint_dir
         self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
-        imreadImg = imread(self.data[0])
+        
 
         self.build_model()
 
@@ -142,7 +143,7 @@ class DCGAN(object):
         sample_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
 
         sample_files = self.data[0:self.batch_size]
-        sample = [get_image2(sample_file, self.input_width, self.input_height) 
+        sample = [get_image(sample_file, self.input_width, self.input_height) 
                   for sample_file in sample_files]
         sample_inputs = np.array(sample).astype(np.float32)
 
@@ -166,7 +167,7 @@ class DCGAN(object):
 
             for idx in range(0, batch_idxs):
                 batch_files = self.data[idx *config.batch_size:(idx+1)*config.batch_size]
-                batch = [get_image2(batch_file, self.input_width, self.input_height) 
+                batch = [get_image(batch_file, self.input_width, self.input_height) 
                          for batch_file in batch_files]
                 batch_images = np.array(batch).astype(np.float32)
                 batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \

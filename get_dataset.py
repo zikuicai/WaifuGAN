@@ -5,10 +5,13 @@ Downloads the following:
 - Celeb-A dataset
 - LSUN dataset
 - MNIST dataset
-- Anime-Faces dataset 
+- Anime-faces dataset 
 
 
-As for anime_faces dataset, it is collected by https://github.com/jayleicn/animeGAN
+About Anime_faces dataset: 
+It consists of 48548 pictures of anime faces where each picture has size 96x96.
+
+It is collected by https://github.com/jayleicn/animeGAN
 The dataset link is here: 
 https://drive.google.com/file/d/0B4wZXrs0DHMHMEl1ODVpMjRTWEk/view?usp=sharing
 
