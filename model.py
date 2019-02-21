@@ -1,4 +1,3 @@
-from __future__ import division
 import os
 import time
 import math
@@ -30,9 +29,7 @@ class DCGAN(object):
         """
         self.sess = sess
         self.crop = crop
-
         self.batch_size = batch_size
-
         self.input_height = input_height
         self.input_width = input_width
         self.output_height = output_height
@@ -137,7 +134,7 @@ class DCGAN(object):
                                     self.g_summary, self.d_loss_fake_summary, self.g_loss_summary])
         self.d_summary = merge_summary(
             [self.z_summary, self.d_real_summary, self.d_loss_real_summary, self.d_loss_summary])
-        self.writer = SummaryWriter("./logs", self.sess.graph)
+        self.writer = SummaryWriter("./result/logs", self.sess.graph)
 
         # initialize noise that uniformly distributes between -1 and 1
         sample_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))

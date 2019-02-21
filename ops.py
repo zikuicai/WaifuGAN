@@ -64,7 +64,7 @@ def conv_out_size(h, w, stride_h, stride_w):
     """Calculate the output size from conv layer
     Every time divide h,w by the stride sizes in h,w
     """
-    h = int(math.ceil(float(h) / float(stride_h)))
+    h = int(math.ceil(float(h) / float(stride_initializer=h)))
     w = int(math.ceil(float(w) / float(stride_w)))
     return h,w
 
@@ -80,7 +80,7 @@ def dense(x, output_size, name='dense'):
 
     with tf.variable_scope(name):
         matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
-                                 tf.random_normal_initializer(stddev=0.02))
+                                 initializer=tf.random_normal_initializer(stddev=0.02))
         bias = tf.get_variable("bias", [output_size],
                                initializer=tf.constant_initializer(0.0))
         return tf.matmul(x, matrix) + bias
@@ -89,7 +89,6 @@ def dense(x, output_size, name='dense'):
 def loss(x, y):
     """Cost function
     Define the loss function as sigmoid_cross_entropy_with_logits
-    http://neuralnetworksanddeeplearning.com/chap3.html#introducing_the_cross-entropy_cost_function
 
     Returns:
       y * -log(sigmoid(x)) + (1 - y) * -log(1 - sigmoid(x))

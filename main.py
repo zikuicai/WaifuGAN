@@ -6,7 +6,7 @@ from model import DCGAN
 from utils import visualize, show_all_variables
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 10, "Epoch to train [25]")
+flags.DEFINE_integer("epoch", 100, "Epoch to train [25]")
 flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
 
 flags.DEFINE_integer("input_height", 96, "The height of image to use. [96]")
@@ -22,8 +22,8 @@ flags.DEFINE_float("beta1", 0.5, "Momentum term of adam. [0.5]")
 flags.DEFINE_string("data_dir", "./data/anime-faces", "The path of images.")
 flags.DEFINE_string("input_fname_pattern", "*.jpg", "Glob pattern of filename of input images. [*.jpg]")
 
-flags.DEFINE_string("checkpoint_dir", ".result/checkpoint", "Directory name to save the checkpoints.")
-flags.DEFINE_string("sample_dir", ".result/samples", "Directory name to save the image samples.")
+flags.DEFINE_string("checkpoint_dir", "./result/checkpoint", "Directory name to save the checkpoints.")
+flags.DEFINE_string("sample_dir", "./result/samples", "Directory name to save the image samples.")
 
 flags.DEFINE_boolean("train", True, "True for training, False for testing [False]")
 flags.DEFINE_boolean("crop", True, "True for training, False for testing [False]")

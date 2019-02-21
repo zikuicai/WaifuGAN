@@ -1,4 +1,3 @@
-from __future__ import division
 import math
 import random
 import scipy.misc
@@ -13,34 +12,18 @@ def show_all_variables():
     slim.model_analyzer.analyze_vars(model_vars, print_info=True)
 
 
-def imread(path):
-        return scipy.misc.imread(path).astype(np.float)
-
-
 def get_image(image_path, input_height, input_width,
               resize_height=64, resize_width=64,
               crop=True):
-    image = imread(image_path)
+    image = scipy.misc.imread(image_path).astype(np.float)
     return transform(image, input_height, input_width,
                      resize_height, resize_width, crop)
 
-def get_image2(image_path, w, h):
-    """Use random crop to get 400x400 image
-    """
-    image = imread(image_path)
-    cropped_image = random_crop(image, w, h)
-    # normalize every element in the image to be between -0.5 and 0.5
-    normalized_image = np.array(cropped_image)/127.5 - 1.
-    return normalized_image
-
-
-def imsave(images, size, path):
-    image = np.squeeze(merge(images, size))
-    return scipy.misc.imsave(path, image)
-
 
 def save_images(images, size, image_path):
-    return imsave(inverse_transform(images), size, image_path)
+    images = inverse_transform(images)
+    image = np.squeeze(merge(images, size))
+    scipy.misc.imsave(image_path, image)
 
 
 def merge(images, size):  
@@ -124,7 +107,6 @@ def make_gif(images, fname, duration=2, true_image=False):
 def visualize(sess, dcgan, config):
     image_frame_dim = int(math.ceil(config.batch_size**.5))
     # set the checkerboard dimension to be the square root of batch size
-    
     # generate n x batch-size images and save them in the samples folder
     n = 10
     for idx in range(n):
@@ -132,7 +114,7 @@ def visualize(sess, dcgan, config):
         z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
         samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
         save_images(samples, [image_frame_dim, image_frame_dim],
-                    './samples/test_%04d.png' % (idx))
+                    config.sample_dir+'/test_%04d.png' % (idx))
 
 
 def image_manifold_size(num_images):
