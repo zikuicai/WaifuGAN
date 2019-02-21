@@ -120,7 +120,8 @@ def download_anime_faces(dirpath):
   data_dir = 'anime-faces'
   data_path = os.path.join(dirpath, data_dir)
   if os.path.exists(data_path):
-    print('Found anime-faces - skip')
+    print('Found anime-faces - Start Cleaning')
+    clean_anime_faces(data_path)  
     return
 
   filename, drive_id  = "anime-faces.tar.gz", "0B4wZXrs0DHMHMEl1ODVpMjRTWEk"
@@ -132,7 +133,7 @@ def download_anime_faces(dirpath):
     download_file_from_google_drive(drive_id, save_path)
 
   tar = tarfile.open(save_path, "r:gz")
-  tar.extractall(dir_path)
+  tar.extractall(dirpath)
   tar.close()
   os.remove(save_path)
   
@@ -157,7 +158,7 @@ def clean_anime_faces(root):
                   destination = os.path.join(root, name+'.jpg')
               shutil.move(source, destination)
           os.rmdir(path_node)
-      else:
+      elif path_node.split('.')[-1] != 'jpg':
           os.remove(path_node)
 
 def _list_categories(tag):
