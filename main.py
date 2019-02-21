@@ -22,11 +22,12 @@ flags.DEFINE_float("beta1", 0.5, "Momentum term of adam. [0.5]")
 flags.DEFINE_string("data_dir", "./data/anime-faces", "The path of images.")
 flags.DEFINE_string("input_fname_pattern", "*.jpg", "Glob pattern of filename of input images. [*.jpg]")
 
-flags.DEFINE_string("checkpoint_dir", ".result/checkpoint", "Directory name to save the checkpoints.")
-flags.DEFINE_string("sample_dir", ".result/samples", "Directory name to save the image samples.")
+flags.DEFINE_string("checkpoint_dir", "./checkpoint", "Directory name to save the checkpoints.")
+flags.DEFINE_string("logs_dir", "./logs", "Directory name to save the summary logs.")
+flags.DEFINE_string("sample_dir", "./samples", "Directory name to save the image samples.")
 
-flags.DEFINE_boolean("train", True, "True for training, False for testing [False]")
-flags.DEFINE_boolean("crop", True, "True for training, False for testing [False]")
+flags.DEFINE_boolean("train", False, "True for training, False for testing [False]")
+flags.DEFINE_boolean("crop", False, "True for training, False for testing [False]")
 FLAGS = flags.FLAGS
 
 
@@ -57,6 +58,7 @@ def main(_):
             input_fname_pattern=FLAGS.input_fname_pattern,
             crop=FLAGS.crop,
             checkpoint_dir=FLAGS.checkpoint_dir,
+            logs_dir=FLAGS.logs_dir,
             sample_dir=FLAGS.sample_dir)
 
         show_all_variables()

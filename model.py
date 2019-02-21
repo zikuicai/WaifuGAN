@@ -14,7 +14,7 @@ class DCGAN(object):
     def __init__(self, sess, input_height=108, input_width=108, crop=True,
                  batch_size=64, output_height=64, output_width=64,
                  z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3,
-                 data_dir='default', input_fname_pattern='*.jpg', checkpoint_dir=None, sample_dir=None):
+                 data_dir='default', input_fname_pattern='*.jpg', checkpoint_dir=None, sample_dir=None, logs_dir=None):
         """Initialize some default parameters.
 
         Args:
@@ -59,6 +59,7 @@ class DCGAN(object):
         self.data_dir = data_dir
         self.input_fname_pattern = input_fname_pattern
         self.checkpoint_dir = checkpoint_dir
+        self.logs_dir = logs_dir
         self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
         
 
@@ -137,7 +138,7 @@ class DCGAN(object):
                                     self.g_summary, self.d_loss_fake_summary, self.g_loss_summary])
         self.d_summary = merge_summary(
             [self.z_summary, self.d_real_summary, self.d_loss_real_summary, self.d_loss_summary])
-        self.writer = SummaryWriter("./logs", self.sess.graph)
+        self.writer = SummaryWriter(config.logs_dir, self.sess.graph)
 
         # initialize noise that uniformly distributes between -1 and 1
         sample_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
