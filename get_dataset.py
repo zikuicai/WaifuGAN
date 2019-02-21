@@ -132,7 +132,7 @@ def download_anime_faces(dirpath):
     download_file_from_google_drive(drive_id, save_path)
 
   tar = tarfile.open(save_path, "r:gz")
-  tar.extractall(data_path)
+  tar.extractall(dir_path)
   tar.close()
   os.remove(save_path)
   
