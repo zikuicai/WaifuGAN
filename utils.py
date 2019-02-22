@@ -11,23 +11,36 @@ def show_all_variables():
     model_vars = tf.trainable_variables()
     slim.model_analyzer.analyze_vars(model_vars, print_info=True)
 
-def image_manifold_size(num_images):
-    # see if the height and width are the same
-    manifold_h = int(np.floor(np.sqrt(num_images)))
-    manifold_w = int(np.ceil(np.sqrt(num_images)))
-    assert manifold_h * manifold_w == num_images
-    return manifold_h, manifold_w
+
+def imread(path):
+        return scipy.misc.imread(path).astype(np.float)
+
 
 def get_image(image_path, input_height, input_width,
-              resize_height=64, resize_width=64):
-    image = scipy.misc.imread(image_path).astype(np.float)
+              resize_height=64, resize_width=64,
+              crop=True):
+    image = imread(image_path)
     return transform(image, input_height, input_width,
-                     resize_height, resize_width)
+                     resize_height, resize_width, crop)
+
+def get_image2(image_path, w, h):
+    """Use random crop to get 400x400 image
+    """
+    image = imread(image_path)
+    cropped_image = random_crop(image, w, h)
+    # normalize every element in the image to be between -0.5 and 0.5
+    normalized_image = np.array(cropped_image)/127.5 - 1.
+    return normalized_image
+
+
+def imsave(images, size, path):
+    image = np.squeeze(merge(images, size))
+    return scipy.misc.imsave(path, image)
+
 
 def save_images(images, size, image_path):
-    images = inverse_transform(images)
-    image = np.squeeze(merge(images, size))
-    scipy.misc.imsave(image_path, image)
+    return imsave(inverse_transform(images), size, image_path)
+
 
 def merge(images, size):  
     """Merge size[0]*size[1] small pictures into a big one
@@ -46,25 +59,46 @@ def merge(images, size):
         raise ValueError('in merge(images,size) images parameter '
                          'must have dimensions: HxW or HxWx3 or HxWx4')
 
-def transform(image, resize_height=64, resize_width=64):
-    resized_image = scipy.misc.imresize(image, [resize_height, resize_width])
-    image = np.array(resized_image)/127.5 - 1. 
-    return image
+
+def random_crop(img, width, height):
+    assert img.shape[0] >= height
+    assert img.shape[1] >= width
+    x = random.randint(0, img.shape[1] - width)
+    y = random.randint(0, img.shape[0] - height)
+    img = img[y:y+height, x:x+width]
+    return img
+
+
+def center_crop(x, crop_h, crop_w, resize_h=64, resize_w=64):
+    """Crop an image around the center
+    :param x: input image
+    :param crop_h: the height of the crop
+    :return: an image of size 64x64
+    """
+    if crop_w is None:
+        crop_w = crop_h
+    h, w = x.shape[:2]
+    j = int(round((h - crop_h)/2.))
+    i = int(round((w - crop_w)/2.))
+    return scipy.misc.imresize(
+        x[j:j+crop_h, i:i+crop_w], [resize_h, resize_w])
+
+
+def transform(image, input_height, input_width,
+              resize_height=64, resize_width=64, crop=True):
+    if crop:
+        cropped_image = center_crop(
+            image, input_height, input_width,
+            resize_height, resize_width)
+    else:
+        cropped_image = scipy.misc.imresize(
+            image, [resize_height, resize_width])
+    return np.array(cropped_image)/127.5 - 1.
+
 
 def inverse_transform(images):
     return (images+1.)/2.
 
-def visualize(sess, dcgan, config):
-    image_frame_dim = int(math.ceil(config.batch_size**.5))
-    # set the checkerboard dimension to be the square root of batch size
-    # generate n x batch-size images and save them in the samples folder
-    n = 10
-    for idx in range(n):
-        print(" [*] generating pic %d" % idx)
-        z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
-        samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-        save_images(samples, [image_frame_dim, image_frame_dim],
-                    config.sample_dir+'/test_%04d.png' % (idx))
 
 def make_gif(images, fname, duration=2, true_image=False):
     """make a gif of certain duartion from a bunch of images
@@ -84,3 +118,25 @@ def make_gif(images, fname, duration=2, true_image=False):
 
     clip = mpy.VideoClip(make_frame, duration=duration)
     clip.write_gif(fname, fps=len(images) / duration)
+
+
+def visualize(sess, dcgan, config):
+    image_frame_dim = int(math.ceil(config.batch_size**.5))
+    # set the checkerboard dimension to be the square root of batch size
+    
+    # generate n x batch-size images and save them in the samples folder
+    n = 10
+    for idx in range(n):
+        print(" [*] generating pic %d" % idx)
+        z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
+        samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
+        save_images(samples, [image_frame_dim, image_frame_dim],
+                    './samples/test_%04d.png' % (idx))
+
+
+def image_manifold_size(num_images):
+    # see if the height and width are the same
+    manifold_h = int(np.floor(np.sqrt(num_images)))
+    manifold_w = int(np.ceil(np.sqrt(num_images)))
+    assert manifold_h * manifold_w == num_images
+    return manifold_h, manifold_w

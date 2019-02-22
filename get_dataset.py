@@ -222,7 +222,7 @@ def download_mnist(dirpath):
     print('Decompressing ', file_name)
     subprocess.call(cmd)
 
-def prepare_data_dir(path = './data'):
+def prepare_data_dir(path = './dataset'):
   if not os.path.exists(path):
     os.mkdir(path)
 
@@ -231,10 +231,10 @@ if __name__ == '__main__':
   prepare_data_dir()
 
   if any(name in args.datasets for name in ['CelebA', 'celebA', 'celebA']):
-    download_celeb_a('./data')
+    download_celeb_a('./dataset')
   if 'anime-faces' in args.datasets:
-    download_anime_faces('./data')
+    download_anime_faces('./dataset')
   if 'lsun' in args.datasets:
-    download_lsun('./data')
+    download_lsun('./dataset')
   if 'mnist' in args.datasets:
-    download_mnist('./data')
+    download_mnist('./dataset')

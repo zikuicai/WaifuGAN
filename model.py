@@ -10,41 +10,44 @@ from utils import *
 
 
 class DCGAN(object):
-    def __init__(self, sess, flags, z_dim=100, c_dim=3, 
+    def __init__(self, sess, flags, z_dim=100, c_dim=3,
                  gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024):
         """Initialize some default parameters.
 
         Args:
           sess: TensorFlow session
-          flags: Some parameters defined in main.
+          batch_size: The size of batch. Should be specified before training.
+          y_dim: (optional) Dimension of dim for conditional variable y (see paper page 10). [None]
           z_dim: (optional) Dimension of dim for random noise Z. [100]
-          c_dim: (optional) Dimension of image color. [3]
           gf_dim: (optional) Dimension of gen filters in first conv layer. [64]
           df_dim: (optional) Dimension of discriminator filters in the first conv layer. [64]
           gfc_dim: (optional) Dimension of gen units for for fully connected layer. [1024]
           dfc_dim: (optional) Dimension of discrim units for fully connected layer. [1024]
-          
+          c_dim: (optional) Dimension of image color. [3]
         """
         self.sess = sess
-        
-        self.epoch = flags.epoch
-        self.batch_size = flags.batch_size
-        self.input_height = flags.input_height
-        self.input_width = flags.input_width
-        self.output_height = flags.output_height
-        self.output_width = flags.output_width
-        self.data_dir = flags.data_dir
-        self.input_fname_pattern = flags.input_fname_pattern
-        self.sample_dir = flags.sample_dir
-        self.logs_dir = flags.logs_dir
-        self.checkpoint_dir = flags.checkpoint_dir
-
         self.z_dim = z_dim
         self.c_dim = c_dim
         self.gf_dim = gf_dim
         self.df_dim = df_dim
         self.gfc_dim = gfc_dim
         self.dfc_dim = dfc_dim
+
+        # Parameters from main
+        self.crop = flags.crop
+        self.epoch = flags.epoch
+        self.batch_size = flags.batch_size
+        self.input_height = flags.input_height
+        self.input_width = flags.input_width
+        self.output_height = flags.output_height
+        self.output_width = flags.output_width
+
+        self.data_dir = flags.data_dir
+        self.input_fname_pattern = flags.input_fname_pattern
+        self.checkpoint_dir = flags.checkpoint_dir
+        self.logs_dir = flags.logs_dir
+        self.sample_dir = flags.sample_dir
+        self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
 
         # batch normalization : deals with poor initialization helps gradient flow
         # it's a class, used as a function
@@ -57,13 +60,14 @@ class DCGAN(object):
         self.g_bn2 = batch_norm(name='g_bn2')
         self.g_bn3 = batch_norm(name='g_bn3')
 
-        self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))        
-
         self.build_model()
 
     def build_model(self):
 
-        image_dims = [self.input_height, self.input_width, self.c_dim]
+        if self.crop:  # crop the input image into output size
+            image_dims = [self.output_height, self.output_width, self.c_dim]
+        else:
+            image_dims = [self.input_height, self.input_width, self.c_dim]
 
         self.inputs = tf.placeholder(
             tf.float32, [self.batch_size] + image_dims, name='real_images')
@@ -116,12 +120,12 @@ class DCGAN(object):
 
         self.saver = tf.train.Saver()  # save trained variables
 
-    def train(self, flags):  # define the optimizer for discriminator and generator
+    def train(self, config):  # define the optimizer for discriminator and generator
         
         # setup optimizer
-        d_optimizer = tf.train.AdamOptimizer(flags.learning_rate, beta1=flags.beta1) \
+        d_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
-        g_optimizer = tf.train.AdamOptimizer(flags.learning_rate, beta1=flags.beta1) \
+        g_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.g_loss, var_list=self.g_vars)
 
         tf.initializers.global_variables().run()
@@ -133,7 +137,7 @@ class DCGAN(object):
             [self.z_summary, self.d_real_summary, self.d_loss_real_summary, self.d_loss_summary])
         self.writer = SummaryWriter(self.logs_dir, self.sess.graph)
 
-        # initialize the distribution of noise
+        # initialize noise that uniformly distributes between -1 and 1
         sample_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
 
         sample_files = self.data[0:self.batch_size]
@@ -314,8 +318,9 @@ class DCGAN(object):
     # property decorator
     @property
     def model_dir(self):
+        dataset_name = self.data_dir.split('/')[-1]
         return "{}_{}_{}_{}".format(
-            self.data_dir, self.batch_size,
+            dataset_name, self.batch_size,
             self.output_height, self.output_width)
 
     def save(self, checkpoint_dir, step):

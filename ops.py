@@ -80,7 +80,7 @@ def dense(x, output_size, name='dense'):
 
     with tf.variable_scope(name):
         matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
-                                 initializer=tf.random_normal_initializer(stddev=0.02))
+                                 tf.random_normal_initializer(stddev=0.02))
         bias = tf.get_variable("bias", [output_size],
                                initializer=tf.constant_initializer(0.0))
         return tf.matmul(x, matrix) + bias
@@ -89,7 +89,7 @@ def dense(x, output_size, name='dense'):
 def loss(x, y):
     """Cost function
     Define the loss function as sigmoid_cross_entropy_with_logits
-    
+    http://neuralnetworksanddeeplearning.com/chap3.html#introducing_the_cross-entropy_cost_function
 
     Returns:
       y * -log(sigmoid(x)) + (1 - y) * -log(1 - sigmoid(x))
