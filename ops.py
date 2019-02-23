@@ -3,20 +3,6 @@ import numpy as np
 import tensorflow as tf
 from utils import *
 
-# for compatibility between different tf versions
-try:
-    image_summary = tf.image_summary
-    scalar_summary = tf.scalar_summary
-    histogram_summary = tf.histogram_summary
-    merge_summary = tf.merge_summary
-    SummaryWriter = tf.train.SummaryWriter
-except:
-    image_summary = tf.summary.image
-    scalar_summary = tf.summary.scalar
-    histogram_summary = tf.summary.histogram
-    merge_summary = tf.summary.merge
-    SummaryWriter = tf.summary.FileWriter
-
 
 class batch_norm(object):
     def __init__(self, epsilon=1e-5, momentum=0.9, name="batch_norm"):

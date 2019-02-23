@@ -84,10 +84,10 @@ class DCGAN(object):
         self.d_fake, self.d_fake_logits = self.discriminator(self.g, reuse=True)
         # D_ is the probability that fake images being recognized as real
 
-        self.z_summary = histogram_summary("z", self.z)
-        self.d_real_summary = histogram_summary("d_real", self.d_real)
-        self.d_fake_summary = histogram_summary("d_fake", self.d_fake)
-        self.g_summary = image_summary("g", self.g)
+        self.z_summary = tf.summary.histogram("z", self.z)
+        self.d_real_summary = tf.summary.histogram("d_real", self.d_real)
+        self.d_fake_summary = tf.summary.histogram("d_fake", self.d_fake)
+        self.g_summary = tf.summary.image("g", self.g)
 
         self.d_loss_real = tf.reduce_mean(
             loss(self.d_real_logits, tf.ones_like(self.d_real)))
@@ -108,10 +108,10 @@ class DCGAN(object):
             loss(self.d_fake_logits, tf.ones_like(self.d_fake)))
         # the loss for generator to make real enough iamges
 
-        self.d_loss_real_summary = scalar_summary("d_loss_real", self.d_loss_real)
-        self.d_loss_fake_summary = scalar_summary("d_loss_fake", self.d_loss_fake)
-        self.d_loss_summary = scalar_summary("d_loss", self.d_loss)
-        self.g_loss_summary = scalar_summary("g_loss", self.g_loss)
+        self.d_loss_real_summary = tf.summary.scalar("d_loss_real", self.d_loss_real)
+        self.d_loss_fake_summary = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
+        self.d_loss_summary = tf.summary.scalar("d_loss", self.d_loss)
+        self.g_loss_summary = tf.summary.scalar("g_loss", self.g_loss)
 
         t_vars = tf.trainable_variables()  # define all variables
 
@@ -131,11 +131,11 @@ class DCGAN(object):
         tf.initializers.global_variables().run()
 
         # merge the variables related to generator and discriminator
-        self.g_summary = merge_summary([self.z_summary, self.d_fake_summary,
+        self.g_summary = tf.summary.merge([self.z_summary, self.d_fake_summary,
                                     self.g_summary, self.d_loss_fake_summary, self.g_loss_summary])
-        self.d_summary = merge_summary(
+        self.d_summary = tf.summary.merge(
             [self.z_summary, self.d_real_summary, self.d_loss_real_summary, self.d_loss_summary])
-        self.writer = SummaryWriter(self.logs_dir, self.sess.graph)
+        self.writer = tf.summary.FileWriter(self.logs_dir, self.sess.graph)
 
         # initialize noise that uniformly distributes between -1 and 1
         sample_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
@@ -145,25 +145,26 @@ class DCGAN(object):
                   for sample_file in sample_files]
         sample_inputs = np.array(sample).astype(np.float32)
 
-        counter = 1
+        # number of total batches
+        number_images = len(os.listdir(self.data_dir))
+        number_batches = number_images // self.batch_size
+
+        batch_counter = 1
         # number of batches has trained on
         start_time = time.time()
         could_load, checkpoint_counter = self.load(self.checkpoint_dir)
         # load checkpoint and decide whether to train from scratch
         if could_load:
-            counter = checkpoint_counter
+            batch_counter = number_batches * checkpoint_counter
             print(" [*] Load SUCCESS")
         else:
             print(" [!] Load failed...")
 
-        for epoch in range(self.epoch):
-
+        for epoch in range(checkpoint_counter+1, self.epoch+1):
+            # shuffle images
             self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
-            # get all images in arbitrary order
-            batch_idxs = len(self.data) // self.batch_size
-            # how many batches the whole data set can be divided into
 
-            for idx in range(0, batch_idxs):
+            for idx in range(0, number_batches):
                 batch_files = self.data[idx *self.batch_size:(idx+1)*self.batch_size]
                 batch = [get_image(batch_file, self.input_width, self.input_height) 
                          for batch_file in batch_files]
@@ -175,29 +176,28 @@ class DCGAN(object):
                 _, summary_str = self.sess.run(
                     [d_optimizer, self.d_summary],
                     feed_dict={self.inputs: batch_images, self.z: batch_z})
-                self.writer.add_summary(summary_str, counter)
+                self.writer.add_summary(summary_str, batch_counter)
 
                 # Update G network
                 _, summary_str = self.sess.run([g_optimizer, self.g_summary],
                                                feed_dict={self.z: batch_z})
-                self.writer.add_summary(summary_str, counter)
+                self.writer.add_summary(summary_str, batch_counter)
 
                 # Run g_optimizer twice to make sure that d_loss does not go to zero (different from paper)
                 _, summary_str = self.sess.run([g_optimizer, self.g_summary],
                                                feed_dict={self.z: batch_z})
-                self.writer.add_summary(summary_str, counter)
+                self.writer.add_summary(summary_str, batch_counter)
 
                 errD_fake = self.d_loss_fake.eval({self.z: batch_z})
                 errD_real = self.d_loss_real.eval({self.inputs: batch_images})
+                errD = errD_fake + errD_real
                 errG = self.g_loss.eval({self.z: batch_z})
 
-                counter += 1
+                batch_counter += 1
                 print("Epoch: [%4d] batch: [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f"
-                      % (epoch + 1, idx + 1, batch_idxs,
-                         time.time() - start_time, errD_fake+errD_real, errG))
+                      % (epoch, idx + 1, number_batches, time.time() - start_time, errD, errG))
 
-            # if epoch % 10 == 9:
-            # save generated sample images every 10 epoches
+            # save generated sample images every epoch
             try:
                 samples, d_loss, g_loss = self.sess.run(
                     [self.sampler, self.d_loss, self.g_loss],
@@ -212,9 +212,8 @@ class DCGAN(object):
             except:
                 print("save pic error!...")
             
-            # if epoch % 20 == 9:
-            # save checkpoint every 20 epochs
-            self.save(self.checkpoint_dir, counter)
+            # save checkpoint every epoch
+            self.save(self.checkpoint_dir, epoch)
 
 
     def discriminator(self, x, reuse=False):
@@ -324,6 +323,7 @@ class DCGAN(object):
             self.output_height, self.output_width)
 
     def save(self, checkpoint_dir, step):
+        # how to save only 5 or even less
         model_name = "DCGAN.model"
         checkpoint_dir = os.path.join(checkpoint_dir, self.model_dir)
 
