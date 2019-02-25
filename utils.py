@@ -23,14 +23,6 @@ def get_image(image_path, input_height, input_width,
     return transform(image, input_height, input_width,
                      resize_height, resize_width, crop)
 
-def get_image2(image_path, w, h):
-    """Use random crop to get 400x400 image
-    """
-    image = imread(image_path)
-    cropped_image = random_crop(image, w, h)
-    # normalize every element in the image to be between -0.5 and 0.5
-    normalized_image = np.array(cropped_image)/127.5 - 1.
-    return normalized_image
 
 
 def imsave(images, size, path):
@@ -70,11 +62,6 @@ def random_crop(img, width, height):
 
 
 def center_crop(x, crop_h, crop_w, resize_h=64, resize_w=64):
-    """Crop an image around the center
-    :param x: input image
-    :param crop_h: the height of the crop
-    :return: an image of size 64x64
-    """
     if crop_w is None:
         crop_w = crop_h
     h, w = x.shape[:2]
@@ -100,32 +87,12 @@ def inverse_transform(images):
     return (images+1.)/2.
 
 
-def make_gif(images, fname, duration=2, true_image=False):
-    """make a gif of certain duartion from a bunch of images
-    """
-    import moviepy.editor as mpy
-
-    def make_frame(t):
-        try:
-            x = images[int(len(images)/duration*t)]
-        except:
-            x = images[-1]
-
-        if true_image:
-            return x.astype(np.uint8)
-        else:
-            return ((x+1)/2*255).astype(np.uint8)
-
-    clip = mpy.VideoClip(make_frame, duration=duration)
-    clip.write_gif(fname, fps=len(images) / duration)
-
-
 def visualize(sess, dcgan, config):
     image_frame_dim = int(math.ceil(config.batch_size**.5))
     # set the checkerboard dimension to be the square root of batch size
     
     # generate n x batch-size images and save them in the samples folder
-    n = 10
+    n = 100
     for idx in range(n):
         print(" [*] generating pic %d" % idx)
         z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
