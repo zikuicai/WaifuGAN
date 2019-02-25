@@ -49,17 +49,6 @@ class DCGAN(object):
         self.sample_dir = flags.sample_dir
         self.data = glob(os.path.join(self.data_dir, self.input_fname_pattern))
 
-        # batch normalization : deals with poor initialization helps gradient flow
-        # it's a class, used as a function
-        self.d_bn1 = batch_norm(name='d_bn1')
-        self.d_bn2 = batch_norm(name='d_bn2')
-        self.d_bn3 = batch_norm(name='d_bn3')
-
-        self.g_bn0 = batch_norm(name='g_bn0')
-        self.g_bn1 = batch_norm(name='g_bn1')
-        self.g_bn2 = batch_norm(name='g_bn2')
-        self.g_bn3 = batch_norm(name='g_bn3')
-
         self.build_model()
 
     def build_model(self):
@@ -123,11 +112,12 @@ class DCGAN(object):
     def train(self, config):  # define the optimizer for discriminator and generator
         
         # setup optimizer
-        d_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
-            .minimize(self.d_loss, var_list=self.d_vars)
-        g_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
-            .minimize(self.g_loss, var_list=self.g_vars)
+        d_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1)
+        g_optimizer = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1)
 
+        d_train_op = d_optimizer.minimize(self.d_loss, var_list=self.d_vars)
+        g_train_op = g_optimizer.minimize(self.g_loss, var_list=self.g_vars)
+        
         tf.initializers.global_variables().run()
 
         # merge the variables related to generator and discriminator
@@ -174,19 +164,19 @@ class DCGAN(object):
 
                 # Update D network
                 _, summary_str = self.sess.run(
-                    [d_optimizer, self.d_summary],
+                    [d_train_op, self.d_summary],
                     feed_dict={self.inputs: batch_images, self.z: batch_z})
                 self.writer.add_summary(summary_str, batch_counter)
 
                 # Update G network
-                _, summary_str = self.sess.run([g_optimizer, self.g_summary],
+                _, summary_str = self.sess.run([g_train_op, self.g_summary],
                                                feed_dict={self.z: batch_z})
                 self.writer.add_summary(summary_str, batch_counter)
 
                 # Run g_optimizer twice to make sure that d_loss does not go to zero (different from paper)
-                _, summary_str = self.sess.run([g_optimizer, self.g_summary],
-                                               feed_dict={self.z: batch_z})
-                self.writer.add_summary(summary_str, batch_counter)
+                # _, summary_str = self.sess.run([g_train_op, self.g_summary],
+                #                                feed_dict={self.z: batch_z})
+                # self.writer.add_summary(summary_str, batch_counter)
 
                 errD_fake = self.d_loss_fake.eval({self.z: batch_z})
                 errD_real = self.d_loss_real.eval({self.inputs: batch_images})
@@ -224,22 +214,22 @@ class DCGAN(object):
             # conv2d, batch_norm, leaky_relu
 
             h0 = conv2d(x, self.df_dim, name='d_h0_conv')
-            h0 = tf.nn.leaky_relu(h0)
+            h0 = lrelu(h0)
             
             h1 = conv2d(h0, self.df_dim*2, name='d_h1_conv')
-            h1 = self.d_bn1(h1)
+            h1 = batch_norm(name='d_bn1')(h1)
             h1 = lrelu(h1)
 
             h2 = conv2d(h1, self.df_dim*4, name='d_h2_conv')
-            h2 = self.d_bn2(h2)
+            h2 = batch_norm(name='d_bn2')(h2)
             h2 = lrelu(h2)
 
             h3 = conv2d(h2, self.df_dim*8, name='d_h3_conv')
-            h3 = self.d_bn3(h3)
+            h3 = batch_norm(name='d_bn3')(h3)
             h3 = lrelu(h3)
 
             h4 = tf.reshape(h3, [self.batch_size, -1])
-            h4 = dense(h4, 1, name='d_h4_dense')
+            h4 = dense(h4, 1)
             
             # return the probability and logits
             return tf.nn.sigmoid(h4), h4
@@ -261,23 +251,22 @@ class DCGAN(object):
             # project z to z1 and reshape
             z1 = dense(z, self.gf_dim * 8 * s_h4 * s_w4, 'g_h0_dense')
             h0 = tf.reshape(z1, [-1, s_h4, s_w4, self.gf_dim * 8])
-            h0 = tf.nn.relu(self.g_bn0(h0))
+            h0 = batch_norm(name='g_bn0')(h0)
+            h0 = tf.nn.relu(h0)
 
-            # following are 4 convolutional layers
-            h1 = deconv2d(h0, [self.batch_size, s_h3, s_w3, 
-                               self.gf_dim * 4], name='g_h1')
-            h1 = tf.nn.relu(self.g_bn1(h1))
+            h1 = deconv2d(h0, [self.batch_size, s_h3, s_w3, self.gf_dim * 4], name='g_h1')
+            h1 = batch_norm(name='g_bn1')(h1)
+            h1 = tf.nn.relu(h1)
 
-            h2 = deconv2d(h1, [self.batch_size, s_h2, s_w2, 
-                               self.gf_dim * 2], name='g_h2')
-            h2 = tf.nn.relu(self.g_bn2(h2))
+            h2 = deconv2d(h1, [self.batch_size, s_h2, s_w2, self.gf_dim * 2], name='g_h2')
+            h2 = batch_norm(name='g_bn2')(h2)
+            h2 = tf.nn.relu(h2)
 
-            h3 = deconv2d(h2, [self.batch_size, s_h1, s_w1, 
-                               self.gf_dim * 1], name='g_h3')
-            h3 = tf.nn.relu(self.g_bn3(h3))
+            h3 = deconv2d(h2, [self.batch_size, s_h1, s_w1, self.gf_dim * 1], name='g_h3')
+            h3 = batch_norm(name='g_bn3')(h3)
+            h3 = tf.nn.relu(h3)
 
-            h4 = deconv2d(h3, [self.batch_size, s_h0, s_w0, 
-                               self.c_dim], name='g_h4')
+            h4 = deconv2d(h3, [self.batch_size, s_h0, s_w0, self.c_dim], name='g_h4')
 
             return tf.nn.tanh(h4)
 
@@ -295,19 +284,22 @@ class DCGAN(object):
 
             z1 = dense(z, self.gf_dim * 8 * s_h4 * s_w4, 'g_h0_dense')
             h0 = tf.reshape(z1, [-1, s_h4, s_w4, self.gf_dim * 8])
-            h0 = tf.nn.relu(self.g_bn0(h0, train=False))
+            h0 = tf.nn.relu(batch_norm(name='g_bn0')(h0, train=False))
 
             h1 = deconv2d(h0, [self.batch_size, s_h3, s_w3, 
                                self.gf_dim * 4], name='g_h1')
-            h1 = tf.nn.relu(self.g_bn1(h1, train=False))
+            h1 = batch_norm(name='g_bn1')(h1, train=False)
+            h1 = tf.nn.relu(h1)
 
             h2 = deconv2d(h1, [self.batch_size, s_h2, s_w2, 
                                self.gf_dim * 2], name='g_h2')
-            h2 = tf.nn.relu(self.g_bn2(h2, train=False))
+            h2 = batch_norm(name='g_bn2')(h2, train=False)
+            h2 = tf.nn.relu(h2)
 
             h3 = deconv2d(h2, [self.batch_size, s_h1, s_w1, 
                                self.gf_dim * 1], name='g_h3')
-            h3 = tf.nn.relu(self.g_bn3(h3, train=False))
+            h3 = batch_norm(name='g_bn3')(h3, train=False)
+            h3 = tf.nn.relu(h3)
 
             h4 = deconv2d(h3, [self.batch_size, s_h0, s_w0, 
                                self.c_dim], name='g_h4')
