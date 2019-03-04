@@ -184,8 +184,9 @@ class DCGAN(object):
                 errG = self.g_loss.eval({self.z: batch_z})
 
                 batch_counter += 1
-                print("Epoch: [%4d] batch: [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f"
-                      % (epoch, idx + 1, number_batches, time.time() - start_time, errD, errG))
+                if idx % 100 == 0:
+                    print("Epoch: [%4d] batch: [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f"
+                        % (epoch, idx + 1, number_batches, time.time() - start_time, errD, errG))
 
             # save generated sample images every epoch
             try:
